@@ -7,3 +7,5 @@ pydantic
 python-dotenv
 # openai
 # anthropic
+pytest
+httpx

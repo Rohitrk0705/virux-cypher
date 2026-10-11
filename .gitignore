@@ -16,3 +16,6 @@ docker/neo4j-data/
 .idea/
 .vscode/
 *.log
+
+data/mitre/raw/
+.pytest_cache/

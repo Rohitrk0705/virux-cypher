@@ -1,0 +1,143 @@
+loaded 3629 events, 276 ground-truth technique mappings, 0 mapper technique mappings
+
+=== graph statistics ===
+nodes:
+  Device           11
+  Event          3629
+  IP               60
+  Incident        306
+  Process          24
+  Tactic           10
+  Technique        15
+  User              8
+  total          4063
+relationships:
+  BELONGS_TO       15
+  EXECUTED       1282
+  INVOLVES       5795
+  MAPS_TO         276
+  NEXT           1069
+  OCCURRED_ON    3629
+  PART_OF        1375
+  PERFORMED      3629
+  total         17070
+hubs (>= 4 distinct users, ignored when linking): 52
+  Device SRV-DB01        7 users
+  Device SRV-DC01        6 users
+  Device SRV-FILE01      8 users
+  Device SRV-MAIL01      7 users
+  IP     10.0.0.2        7 users
+  IP     10.0.0.3        8 users
+  IP     10.0.0.4        8 users
+  IP     10.0.0.5        7 users
+  plus 44 external addresses: 192.0.2.10, 192.0.2.100, 192.0.2.101, 192.0.2.102, 192.0.2.103, 192.0.2.104, 192.0.2.105, 192.0.2.106, 192.0.2.107, 192.0.2.108, 192.0.2.109, 192.0.2.11, 192.0.2.110, 192.0.2.111, 192.0.2.12, 192.0.2.13, 192.0.2.14, 192.0.2.15, 192.0.2.16, 192.0.2.17, 192.0.2.18, 192.0.2.19, 192.0.2.20, 192.0.2.21, 192.0.2.22, 192.0.2.23, 192.0.2.24, 192.0.2.25, 192.0.2.26, 192.0.2.27, 192.0.2.28, 192.0.2.29, 192.0.2.30, 192.0.2.31, 192.0.2.32, 192.0.2.33, 192.0.2.34, 192.0.2.35, 192.0.2.36, 192.0.2.37, 192.0.2.38, 192.0.2.39, 203.0.113.201, 203.0.113.7
+inferred incidents at W=30 min (Incident nodes, with PART_OF and NEXT edges per method):
+  heuristic  279 incidents from 1282 candidate events
+  labels      27 incidents from 276 candidate events
+
+=== incident inference vs ground truth (n = 24 true incidents) ===
+method     W(min) inferred    false     incP   merged    exact   trajGT  trajMap coverage   purity  jaccard    pairP     atkP     atkR    atkF1
+-----------------------------------------------------------------------------------------------------------------------------------------------
+heuristic       5      167      132    0.210        0        0        0        -    0.457    0.806    0.450    0.989    1.000    0.496    0.663
+heuristic      15      276      244    0.116        0        9       11        -    0.828    0.927    0.775    0.947    1.000    0.681    0.811
+heuristic      30      279      253    0.093        0        8       11        -    0.887    0.852    0.772    0.907    1.000    0.785    0.879
+heuristic      60      195      172    0.118        1        7       11        -    0.886    0.694    0.652    0.725    0.987    0.800    0.884
+heuristic     120      103       80    0.223        1        7       11        -    0.886    0.603    0.576    0.570    0.987    0.800    0.884
+labels          5       39        0    1.000        0        0        0        -    0.481    0.875    0.481    1.000    1.000    0.513    0.679
+labels         15       25        0    1.000        0       21       21        -    0.925    1.000    0.925    1.000    1.000    0.974    0.987
+labels         30       27        0    1.000        0       21       21        -    0.935    1.000    0.935    1.000    1.000    0.978    0.989
+labels         60       23        0    1.000        1       22       22        -    0.958    0.943    0.943    0.989    0.989    1.000    0.995
+labels        120       23        0    1.000        1       22       22        -    0.958    0.943    0.943    0.989    0.989    1.000    0.995
+
+column definitions: see the docstring of evaluation/incident_match.py
+
+LIMITATIONS - read before quoting any number above:
+1. Easy dataset. The generator keeps incidents at least 3 hours apart whenever
+   they share a user or a device. Incidents with different users can still be
+   minutes apart and can share an attacker address (that is the one 'merged'
+   incident at W >= 60). Grouping is therefore much easier here than on real
+   data, and these scores must not be read as real-world accuracy.
+2. 'labels' rows choose candidate events with the ground-truth labels. That is
+   leakage; they are an optimistic upper bound and never the headline figure.
+3. 'heuristic' is label-free but has a ceiling: file_access events and Office
+   application launches are never candidates, so T1005 and T1204.002 steps can
+   never be grouped (25 of the attack events) and trajGT is capped accordingly.
+   Its routine-application list equals the generator's benign application list,
+   so it is tuned to this dataset. About two thirds of its candidates are
+   benign web and mail events, hence the many 'false' incidents.
+4. The default window (30 min) was picked from this same sweep over the same
+   24 incidents; it is not validated on held-out data.
+5. trajGT gives the paired incident's events their ground-truth techniques, so
+   it measures grouping only. trajMap uses the rule-based mapper end to end.
+6. Some coverage comes from benign events bridging gaps between attack steps.
+
+--- per true incident, method=heuristic, W=30 min ---
+  GT-001 A skip        fast -> INC-00122  cov 1.00  pur 0.60  jac 0.60  frag 1  unassigned  0  trajGT ok  trajMap -
+  GT-002 A insert      fast -> INC-00345  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap -
+  GT-003 A skip+insert fast -> INC-00352  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap -
+  GT-004 B base        fast -> INC-00539  cov 0.86  pur 0.75  jac 0.67  frag 1  unassigned  1  trajGT NO  trajMap -
+  GT-005 D insert      fast -> INC-00716  cov 0.88  pur 1.00  jac 0.88  frag 1  unassigned  4  trajGT NO  trajMap -
+  GT-006 B skip        fast -> INC-00761  cov 0.75  pur 1.00  jac 0.75  frag 1  unassigned  1  trajGT NO  trajMap -
+  GT-007 D skip+insert fast -> INC-01200  cov 0.86  pur 0.93  jac 0.81  frag 1  unassigned  4  trajGT NO  trajMap -
+  GT-008 B base        fast -> INC-01329  cov 0.80  pur 0.57  jac 0.50  frag 1  unassigned  1  trajGT NO  trajMap -
+  GT-009 D base        fast -> INC-01784  cov 0.86  pur 1.00  jac 0.86  frag 1  unassigned  4  trajGT NO  trajMap -
+  GT-010 C base        fast -> INC-01822  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap -
+  GT-011 C base        fast -> INC-01830  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap -
+  GT-012 D base        fast -> INC-01850  cov 0.81  pur 1.00  jac 0.81  frag 1  unassigned  5  trajGT NO  trajMap -
+  GT-013 D skip        fast -> INC-01883  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap -
+  GT-014 C skip+insert slow -> INC-02211  cov 0.56  pur 1.00  jac 0.56  frag 2  unassigned  1  trajGT NO  trajMap -
+  GT-015 B insert      slow -> INC-02285  cov 0.50  pur 0.57  jac 0.36  frag 2  unassigned  1  trajGT NO  trajMap -
+  GT-016 D base        fast -> INC-02550  cov 0.92  pur 1.00  jac 0.92  frag 1  unassigned  2  trajGT NO  trajMap -
+  GT-017 C skip        fast -> INC-02856  cov 1.00  pur 0.50  jac 0.50  frag 1  unassigned  0  trajGT ok  trajMap -
+  GT-018 C base        fast -> INC-02923  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap -
+  GT-019 B skip+insert fast -> INC-03081  cov 0.83  pur 0.83  jac 0.71  frag 1  unassigned  1  trajGT NO  trajMap -
+  GT-020 A base        fast -> INC-03275  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap -
+  GT-021 A base        fast -> INC-03287  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap -
+  GT-022 A base        slow -> INC-03294  cov 0.83  pur 0.56  jac 0.50  frag 1  unassigned  1  trajGT NO  trajMap -
+  GT-023 B base        fast -> INC-03430  cov 0.83  pur 0.31  jac 0.29  frag 1  unassigned  1  trajGT NO  trajMap -
+  GT-024 C insert      fast -> INC-03595  cov 1.00  pur 0.82  jac 0.82  frag 1  unassigned  0  trajGT ok  trajMap -
+
+--- per true incident, method=labels, W=30 min ---
+  GT-001 A skip        fast -> INC-00138  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap -
+  GT-002 A insert      fast -> INC-00345  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap -
+  GT-003 A skip+insert fast -> INC-00352  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap -
+  GT-004 B base        fast -> INC-00539  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap -
+  GT-005 D insert      fast -> INC-00716  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap -
+  GT-006 B skip        fast -> INC-00761  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap -
+  GT-007 D skip+insert fast -> INC-01211  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap -
+  GT-008 B base        fast -> INC-01329  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap -
+  GT-009 D base        fast -> INC-01784  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap -
+  GT-010 C base        fast -> INC-01822  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap -
+  GT-011 C base        fast -> INC-01830  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap -
+  GT-012 D base        fast -> INC-01850  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap -
+  GT-013 D skip        fast -> INC-01883  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap -
+  GT-014 C skip+insert slow -> INC-02211  cov 0.56  pur 1.00  jac 0.56  frag 2  unassigned  1  trajGT NO  trajMap -
+  GT-015 B insert      slow -> INC-02314  cov 0.38  pur 1.00  jac 0.38  frag 3  unassigned  0  trajGT NO  trajMap -
+  GT-016 D base        fast -> INC-02550  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap -
+  GT-017 C skip        fast -> INC-02862  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap -
+  GT-018 C base        fast -> INC-02923  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap -
+  GT-019 B skip+insert fast -> INC-03081  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap -
+  GT-020 A base        fast -> INC-03275  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap -
+  GT-021 A base        fast -> INC-03287  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap -
+  GT-022 A base        slow -> INC-03294  cov 0.50  pur 1.00  jac 0.50  frag 1  unassigned  3  trajGT NO  trajMap -
+  GT-023 B base        fast -> INC-03476  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap -
+  GT-024 C insert      fast -> INC-03595  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap -
+
+=== sample trajectory (contract 3), method=heuristic, techniques from ground_truth ===
+{
+  "incident_id": "INC-00122",
+  "techniques": [
+    {
+      "id": "T1078",
+      "timestamp": "2026-09-07T12:22:38Z"
+    },
+    {
+      "id": "T1059.001",
+      "timestamp": "2026-09-07T12:30:42Z"
+    },
+    {
+      "id": "T1021.001",
+      "timestamp": "2026-09-07T12:37:08Z"
+    }
+  ]
+}

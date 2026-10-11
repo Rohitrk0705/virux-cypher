@@ -73,7 +73,8 @@ START_DAY = datetime(2026, 9, 7, tzinfo=timezone.utc)  # a Monday
 NUM_DAYS = 12  # Mon 7 Sep .. Fri 18 Sep 2026 (10 business days)
 
 # ----------------------------------------------------------------------------
-# ATT&CK techniques used
+# ATT&CK techniques used (ids, names and tactics as of ATT&CK v19; checked
+# against data/mitre/techniques.json when that file is present)
 # ----------------------------------------------------------------------------
 
 TECHNIQUES = {
@@ -87,7 +88,7 @@ TECHNIQUES = {
     "T1082": ("System Information Discovery", "Discovery"),
     "T1083": ("File and Directory Discovery", "Discovery"),
     "T1053.005": ("Scheduled Task", "Persistence"),
-    "T1070.001": ("Clear Windows Event Logs", "Defense Evasion"),
+    "T1685.005": ("Clear Windows Event Logs", "Defense Impairment"),
     "T1021.001": ("Remote Desktop Protocol", "Lateral Movement"),
     "T1021.002": ("SMB/Windows Admin Shares", "Lateral Movement"),
     "T1005": ("Data from Local System", "Collection"),
@@ -106,7 +107,7 @@ PATTERNS = {
 FOOTHOLD = {"A": "T1078", "B": "T1204.002", "C": "T1078", "D": "T1078"}
 
 # steps an instance may gain when its variant says "insert"
-INSERTABLE = ["T1082", "T1083", "T1053.005", "T1070.001"]
+INSERTABLE = ["T1082", "T1083", "T1053.005", "T1685.005"]
 
 # per pattern: variant of each of its instances (shuffled per pattern)
 VARIANT_PLAN = ["base", "base", "base", "skip", "insert", "skip+insert"]
@@ -308,7 +309,7 @@ def step_events(rng, tech, ctx, t):
         proc_run(["cmd.exe", "tree.com"], 1, 3)
     elif tech == "T1053.005":
         proc_run(["schtasks.exe"])
-    elif tech == "T1070.001":
+    elif tech == "T1685.005":
         proc_run(["wevtutil.exe"])
     elif tech in ("T1021.001", "T1021.002"):
         target = rng.choice([d for d in SERVERS if d != host])
@@ -396,7 +397,7 @@ def attack_incidents(rng):
 
     incidents.sort(key=lambda inc: inc["events"][0]["ts"])
     for n, inc in enumerate(incidents, 1):
-        inc["incident_id"] = f"INC-{n:03d}"
+        inc["incident_id"] = f"GT-{n:03d}"
     return incidents
 
 
@@ -480,6 +481,18 @@ def validate(events, labels, truth):
     assert set(grouped) == labelled, "incidents.json and labels.json disagree"
 
 
+def validate_against_attack(path):
+    """Technique names and tactics must agree with the downloaded ATT&CK data."""
+    if not path.exists():
+        return False
+    attack = json.loads(path.read_text())
+    for tech, (name, tactic) in TECHNIQUES.items():
+        assert tech in attack, f"{tech} is not a current ATT&CK technique"
+        assert attack[tech]["name"] == name, f"{tech}: {name!r} != {attack[tech]['name']!r}"
+        assert tactic in attack[tech]["tactics"], f"{tech}: {tactic} not in {attack[tech]['tactics']}"
+    return True
+
+
 def write_json(path, data):
     path.write_text(json.dumps(data, indent=2) + "\n")
 
@@ -523,6 +536,7 @@ def main():
 
     events, labels, truth = assemble(args.seed)
     validate(events, labels, truth)
+    checked = validate_against_attack(here.parent / "mitre" / "techniques.json")
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
     write_json(args.out_dir / "events.json", events)
@@ -530,7 +544,8 @@ def main():
     write_json(args.out_dir / "incidents.json", truth)
 
     summarize(events, labels, truth)
-    print(f"\nwrote events.json, labels.json, incidents.json to {args.out_dir}")
+    print(f"\ntechniques checked against MITRE ATT&CK data: {'yes' if checked else 'no (data/mitre/techniques.json missing)'}")
+    print(f"wrote events.json, labels.json, incidents.json to {args.out_dir}")
 
 
 if __name__ == "__main__":
