@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+neo4j
+pandas
+scikit-learn
+pydantic
+python-dotenv
+# openai
+# anthropic
