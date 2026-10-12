@@ -1,7 +1,144 @@
 # Progress
 
-(Summary for the morning is at the top once the run is finished; per-milestone
-entries follow.)
+Last updated after Milestone 8. Branch `backend-milestones`, eight commits ahead of `main`, nothing pushed. 119 tests pass. Every number below was produced by code in this repository; the file that holds it is named next to it. Decisions are in `DECISIONS.md`, reviews in `REVIEWS.md`.
+
+## Summary
+
+### Status
+
+| Milestone | Status | Reviewed | Committed |
+|---|---|---|---|
+| M1 synthetic data generator | done | within M2/M3 reviews | yes |
+| M2 Neo4j temporal knowledge graph | done | yes | yes |
+| M3 rule-based ATT&CK mapper | done, numbers corrected | yes | yes |
+| M4 historical database and similarity | done | yes | yes |
+| M5 Markov prediction and harness | done, numbers corrected | yes | yes |
+| M6 experiments E1, E2, E3 | done | yes | yes |
+| M7 agent tools and Agent 2 | done | yes | yes |
+| M8 FastAPI endpoints, Agents 1 and 3 | done | yes | yes |
+| **M9 real-data validation** | **pending, high priority** | – | – |
+| **M10 experiment redesign** | **pending** | – | – |
+| Harder synthetic dataset with overlapping incidents | not started | – | – |
+
+`frontend/` was never touched.
+
+### The numbers that matter
+
+Sample: one synthetic dataset (noisy profile, seed 42): 3,986 events, 24 attack incidents from 4 templates, 90 next-step instances. The mapper is also scored on 13 generator seeds.
+
+| What | Result | Where |
+|---|---|---|
+| Mapper, exact technique, micro F1, 13 seeds | 0.689 mean (sd 0.027, range 0.643–0.755); precision 0.564, recall 0.887 | `evaluation/results/m3_mapper.txt` |
+| Mapper, first version on clean data (**inflated, kept for the record**) | 0.955 | `evaluation/results/m3_mapper_v1_clean.txt` |
+| Incidents inferred by the label-free pipeline | 53, of which 22 contain no attack | `evaluation/results/m3_build.txt` |
+| True incidents reproduced event-for-event | 9 / 24 | same |
+| True trajectories reproduced end to end | 5 / 24 (with ground-truth labels as an upper bound: 15 / 24 grouped) | same |
+| Matching: right reference on top, complete trajectories | 17 / 18 | `evaluation/results/m4_similarity.txt` |
+| Matching: right reference on top, attack in progress | 34 / 66 prefixes | same |
+| Prediction top-1, history contains the attack's template | 0.722 (65 / 90); base 42 / 45, variants 23 / 45 | `evaluation/results/m5_prediction.txt` |
+| Prediction top-1, attack not in the history | 0.278 (25 / 90); 0.133 (12 / 90) without overlapping distractors | `experiments/results/e1.md` |
+| Prediction top-1, most-frequent-next-step baseline | 0.156 (14 / 90) | same |
+| Prediction top-1, MITRE group data alone | 0.000 (0 / 90) | same |
+| Prediction, strict end to end | 0.367 (33 / 90) | `evaluation/results/m5_prediction.txt` |
+| E3 known / variant / novel, ground truth | 22 / 24 (order-free score: 24 / 24) | `experiments/results/e3.md` |
+| E3 known / variant / novel, pipeline | 13 / 24 against a 9 / 24 majority baseline | same |
+
+### What the results say
+
+1. **The deterministic core works as software**: graph, inference, matching, prediction, agents and API are built, tested, reviewed and reproducible from scratch.
+2. **The headline accuracy figures do not survive honest conditions.** The mapper lost a third of its F1 once benign activity looked like real work. End to end, 5 of 24 trajectories are reproduced.
+3. **All three experiments are negative or uninformative as designed.** History helps only when it contains the same sequence (memorisation); below that it is under the frequency baseline. Order does not improve matching, and improves prediction only by replaying a memorised sequence. Known/variant/novel separates on ground truth only because "known" incidents are verbatim copies.
+4. **Real MITRE group data contributes nothing with this method.** The groups do use this dataset's techniques (between 22 and 124 of 167 groups use each one), so the cause is not missing vocabulary: ATT&CK publishes technique sets without order, and an order inferred from tactic and id yields artificial transitions.
+5. **Everything is measured against data, rules, noise and reference sequences written by one author.** None of it is evidence about real logs. That is what M9 is for.
+
+### Decisions made on your behalf that you may want to reverse
+
+Full list in `DECISIONS.md`. The ones with consequences:
+
+- Work is on branch `backend-milestones`, not `main` (P1).
+- The generator's default is now the noisy profile; `--profile clean` reproduces the first dataset (A11).
+- Exfiltration rule rewritten without attacker-address knowledge; **volume and port were not used because contract 1 has neither field** (A8).
+- Mapper rules were deliberately not re-tuned against the noise (A12).
+- The 30-minute incident window was kept although 60 scores higher on the noisy data (K11).
+- The default predictor ignores MITRE group records (R5).
+- Model-facing agent tools take an incident id, not a trajectory, unlike the tool table (T1).
+- Agent 2 defaults to an offline scripted policy; the Claude adapter is included but **has never been run against the real API** (T3).
+- Agents 1 and 3 are deterministic (rules and a template), with no language model (B4, B5).
+- `POST /logs` takes Normalized Events only; raw-log parsing is not built (B3).
+
+### Blockers
+
+None that stopped work. Two things could not be done:
+
+- **Claude adapter untested**: no API key and the `anthropic` package is not installed.
+- **Volume- and port-based exfiltration rule**: needs fields that the frozen contract 1 does not have. If you want it, contract 1 needs `bytes_out` and `destination_port` by team agreement.
+
+### Open TODOs (all from reviews)
+
+Graph and inference:
+- Hub suppression is a global distinct-user count; an ingest can flip a host to "hub" and regroup existing incidents.
+- Slow-paced incidents (steps 15–45 minutes apart) fragment at the 30-minute window.
+- `INTERNAL_PREFIX = "10."` is a string prefix, duplicated in two modules.
+
+Mapper:
+- Largest false-positive sources: staff SMB to the file server, `cmd.exe`, server egress, `7z.exe`.
+- One session per `(user, device)`; password spraying across hosts is missed; no benign off-hours activity exists in the data.
+
+Matching and prediction:
+- Similarity is not prefix-aware, so in-progress attacks match poorly.
+- The default predictor is cached and not refreshed if the historical database is rebuilt in a running process.
+
+API:
+- No request byte limit; every ingest re-maps the whole graph; single-process ingest lock; `/docs` needs internet.
+
+### What I would do next
+
+1. **M9**, because nothing so far says anything about real logs.
+2. **M10**, because the experiments cannot give a positive or a meaningful negative answer in their current design.
+3. Before either: decide whether contract 1 gains `destination_port` and a byte count. Real Sysmon and firewall data have them, and the exfiltration rule needs them.
+4. Run Agent 2 once with a real key to check the Claude adapter.
+5. Merge `backend-milestones` into `main` when you are happy with it.
+
+## Pending milestones
+
+### M9 — Real-data validation (HIGH PRIORITY) — pending
+
+**What.** Validate the pipeline on OTRF Security-Datasets (github.com/OTRF/Security-Datasets): real host telemetry in JSON, each dataset mapped to ATT&CK techniques and tactics, with benign events from the same capture window. The synthetic dataset stays as the controlled benchmark; real data is added as external validation, not as a replacement.
+
+**Needs.**
+- An adapter from Sysmon / Windows Event Log fields into contract 1, without changing the contract.
+- Mapper rules for real event types.
+
+**Why (the motivation to keep).** Every figure in this file is measured against synthetic data whose benign activity, attack templates, mapper rules, noise and historical reference sequences were all written by the same author. The M3 review showed how much that flatters: mapper F1 went from 0.955 to 0.689 just by making benign staff behave more like real users, and the remaining rules are still scored against that author's idea of noise. Nothing here is evidence about real logs until it is run on logs someone else captured and labelled.
+
+**Notes for whoever starts it** (not yet verified against the repository; check before relying on them):
+- Confirm the dataset format, how technique labels are attached (per dataset or per event) and whether benign events are really present in the same capture.
+- Real Sysmon events carry parent process, command line, ports and more. Contract 1 has none of these, so the adapter will discard most of the signal a real detection rule uses. Expect this to be the main finding, and consider it alongside the open question on extending contract 1.
+- The current mapper keys on this bank's inventory (`core/environment.py`) and on action names the generator invented (`rdp_session`, `smb_session`, `privilege_change`). The adapter has to produce those from event ids and logon types, or the rules have to change.
+- If labels are per dataset rather than per event, mapper precision cannot be scored per event the way it is now; plan the metric first.
+
+### M10 — Experiment redesign — pending
+
+**What.** Redesign the dataset and the historical database so E1, E2 and E3 can discriminate.
+
+**Needs.**
+- 15–20 attack templates with graded similarity to each other, instead of 4.
+- A historical database that shares our technique vocabulary and carries usable order.
+- E3's known-class incidents changed from verbatim copies to perturbed instances.
+
+**Why (the motivation to keep).** E1, E2 and E3 all came back negative because 24 incidents from only 4 templates give no "similar but not identical" condition. History either contains the exact sequence (memorisation: top-1 0.722, with verbatim base incidents at 42 / 45) or something unrelated (0.133, below the 0.156 frequency baseline). There is nothing in between, so the experiments cannot show a graded benefit even if one exists. E3's "known" class scores 1.000 by construction because its incidents are copies of the reference sequences.
+
+**One correction to the reasoning as recorded.** The MITRE group records do not score 0.000 because of a vocabulary mismatch. They use this dataset's techniques widely: each of the 14 parent techniques appears in between 22 and 124 of the 167 groups (`evaluation/results/m4_similarity.txt`). They score 0.000 because ATT&CK publishes unordered technique sets, and the order we infer from tactic position and technique id produces transitions that are an artefact of sorting. So a redesigned historical database needs **observed order**, not only shared vocabulary; sources with real sequences (incident reports, the ordered procedure examples in ATT&CK campaigns, or OTRF's own simulation plans from M9) would address the actual cause.
+
+**Notes for whoever starts it.**
+- Patterns that use the same techniques in different orders are needed for E2; today's patterns already differ as sets, so order cannot matter for matching.
+- Distractors and references should come from a source independent of the generator's author. Pattern D's "novel" score rested entirely on overlapping hand-written distractors (14 / 24 with them, 0 / 24 without).
+- Keep the protocols already built (`no_own_reference`, `leave_family_out`, tie-aware top-1, strict end-to-end); they are what exposed the problems and will work unchanged on a larger template set.
+- More templates also means more than 24 incidents; decide the sample size needed for the differences you want to detect before generating.
+
+---
+
+Per-milestone entries follow, oldest first.
 
 ## M1 — synthetic data generator — done
 

@@ -33,9 +33,14 @@ Agents: LLM API w/ tool-calling | Frontend: React + Vite + Cytoscape.js
 
 ## Getting started
 1. Backend env: `cd backend && python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt`
-2. Start Neo4j: `cd ../docker && docker compose up -d`
-3. Generate data: `cd ../data/generator && python generate.py`
-4. Run backend: `cd ../../backend && uvicorn api.main:app --reload`
-5. Run frontend: `cd ../frontend && npm install && npm run dev`
+2. Start Neo4j: `cd ../docker && docker compose up -d`, then `cd .. && cp .env.example .env`
+3. Generate data: `python data/generator/generate.py`
+4. Map events to ATT&CK: `python -m core.attack_mapper`
+5. Build the graph and infer incidents: `python -m knowledge_graph.build --reset`
+6. Run backend: `cd backend && uvicorn api.main:app --reload` (endpoints: `backend/README.md`)
+7. Run frontend: `cd ../frontend && npm install && npm run dev`
 
-See docs/architecture.md and docs/data-contracts.md. Freeze the data contracts before coding.
+Steps 3-5 and all `python -m ...` commands run from the repository root with the backend venv active.
+Tests: `python -m pytest tests -q`. Experiments: `python -m experiments.run_all`.
+
+See docs/architecture.md and docs/data-contracts.md. Current state, results and open work: docs/PROGRESS.md.
