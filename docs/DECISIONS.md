@@ -66,3 +66,13 @@ One line each: what was decided and why. Newest milestone last.
 | R8 | Patterns A and C are one family in held-out evaluation. | A's reference is a prefix of C's; holding out one leaks the other (review). |
 | R9 | One reviewer pass covered M4 and M5 together, with separate findings. | They share files and results; the review was run with nothing else in flight. |
 | R10 | The similarity measure was not changed to be prefix-aware. | Changing the measure after seeing the 34-of-66 result would be tuning on the test data. It is reported and listed as next work. |
+
+## M6 — experiments
+
+| # | Decision | Rationale |
+|---|---|---|
+| E1 | Every experiment runs on ground-truth trajectories and on the label-free pipeline's trajectories. | The first isolates the component; the second is what the system would actually see. |
+| E2 | "Without historical KG" is reported three ways: analytic chance, most-frequent-next-step among other incidents, and models trained on other incidents only. | There is no single obvious "no history" model; showing all three avoids picking a flattering one. |
+| E3 | "Static graph" means order is not used by the scoring rule (set overlap for matching, co-occurrence for prediction); the stored graph is the same. | The cleanest way to isolate the effect of order with everything else equal. |
+| E4 | E3 classes: known = base instances of A/B/C, variant = their skip/insert instances, novel = pattern D. Thresholds are chosen by leave-one-out. | Uses the generator's variants as you asked; leave-one-out avoids fitting thresholds to the tested incident. |
+| E5 | Findings sentences are generated from the result rows, with fixed wording rules for higher / lower / no different (a one-instance gap is "no different"). | A reviewer found hand-written findings that the tables did not support. |

@@ -1,0 +1,5 @@
+trajectories,similarity,accuracy (leave-one-out thresholds),correct,incidents,majority-class baseline,correct with thresholds fitted on all incidents (in-sample),correct 'known' verdicts resting on a record other than the own reference,"incidents without a trajectory (scored 0, called novel)",false positive rate (novel taken for known or variant),novel incidents,AUC known vs rest,AUC novel vs rest (lower score = novel),"thresholds fitted on all 24 (variant, known)",attack-free inferred incidents taken for known or variant
+ground-truth trajectories,temporal,0.917,22,24,9,23,0,0,0.000,6,1.000,0.986,"0.592, 0.916",n/a
+ground-truth trajectories,static,1.000,24,24,9,24,0,0,0.000,6,1.000,1.000,"0.550, 0.916",n/a
+pipeline trajectories,temporal,0.542,13,24,9,16,2,1,0.333,6,0.719,0.759,"0.423, 0.724",3 / 22
+pipeline trajectories,static,0.500,12,24,9,16,1,1,0.333,6,0.704,0.787,"0.585, 0.732",2 / 22

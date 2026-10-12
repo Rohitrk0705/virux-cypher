@@ -233,3 +233,47 @@ Clean, deterministic, reproducible, contracts met in shape, no sign of hyperpara
 | 6 tests | Added. |
 | Nits | Done except the default-predictor cache (**TODO**; restart after rebuilding the database). |
 
+---
+
+## M6 — the three experiments
+
+Reviewer checks that passed: `run_all` twice gives identical checksums for all 12 result files; all 9 CSVs match their markdown tables cell for cell; no train/test leakage (E3 leave-one-out refits on the other 23, benign incidents are not in the fit, E1/E2 hold out the incident or family as described); AUC direction, false-positive arithmetic and confusion matrices are correct; every metric in `docs/experiments.md` is reported somewhere; static and temporal use the same data and candidates. The problems were in the prose.
+
+### Blocking
+
+**B1. An E3 caveat described an error that does not occur in the data.** It said pattern C with its last step skipped equals pattern A and scores 1.0. No such incident exists in this dataset; the two actual ground-truth errors are GT-004 (B skip+insert, 0.633) and GT-015 (A skip+insert, 0.550), both variant called novel. The caveat excused the errors with a mechanism and a number the code never produced.
+
+**B2. E2 never stated its negative results in words, and its findings skipped a row where temporal loses.** Matching is 17 vs 17 and 10 vs 10, so order improves nothing, and no finding said so. The findings printed two of four training conditions; the omitted pipeline pooled row has static ahead on every ranking metric. Without the own family's reference temporal does not win. Top-3 is equal or better for static in all four cited rows. A caveat presupposed a temporal advantage that is absent in those rows.
+
+### Should-fix
+
+- **S1.** E1's "unseen pattern" findings do not say where the gain comes from: 25 of 90 is B 11/24 plus D 14/24, with A and C at 0; D's hits come from the overlapping distractors and B's from a distractor sharing B's opening. Add the combined condition and say the gain is confined to B and D.
+- **S2.** E1 end-to-end rows that use in-environment incidents train on ground-truth trajectories, under a table titled "label-free".
+- **S3.** E3 pipeline accuracy includes a right-for-the-wrong-reason hit (GT-023 matches a 2-technique MITRE group record at 1.0), counts an incident with no trajectory as "novel" without saying so, and gives no majority-class baseline (9 of 24). In-sample accuracy (16/24) against leave-one-out (13/24) is worth reporting as threshold instability.
+- **S4.** E3 lacks the caveat that "known" is 1.000 by construction.
+- **S5.** Sample-size attrition on pipeline trajectories (70 instances, 20 incidents) is not explained.
+- **S6.** The static predictor's no-repeat handicap is stated but not quantified (0 of 90 ground-truth instances, 5 of 70 pipeline instances).
+- **S7.** Metric definitions are absent from the result files.
+
+### Nits
+
+- Two E1 rows read "none / all other incidents"; the chance row is a weak comparator and the frequency baseline should be quoted beside it.
+- E3: "0.333 of the 6" should read "2 of 6"; one-incident differences should be called noise; on ground truth the order-aware score is worse, not merely "not better".
+- Row unpacking by list order is fragile; nothing guards findings text against the tables.
+
+### Reviewer verdict
+
+E1 can claim that a Markov model over the 11 hand-written sequences predicts well when the history contains the generator's own template, that MITRE group data contributes nothing, and that history adds nothing once sibling incidents are available. It cannot claim that history helps on unseen attacks. E2 can claim that order does not improve matching on this dataset and raises Top-1 only when the model can replay a memorised sequence. It cannot claim a general temporal advantage. E3 can claim separation on ground-truth trajectories, with "known" trivially 1.0. It cannot claim usable discrimination on the label-free pipeline.
+
+### Resolution
+
+| Finding | Status |
+|---|---|
+| B1 false caveat | **Fixed.** Removed. The findings now list the misclassified incidents with their scores, generated from the run, and the caveat quotes the measured variant minimum and novel maximum. |
+| B2 unstated negative results | **Fixed.** E2 findings are generated per row for all four training conditions with a higher / lower / no different verdict, plus a summary count; "Order does not improve matching on this dataset" is stated; the caveat no longer presupposes an advantage. |
+| S1 | Fixed: combined condition added (12 of 90); by-pattern counts in the finding; "does NOT show that history helps on unseen attacks". |
+| S2 | Fixed: the end-to-end table keeps only history-trained rows. |
+| S3 | Fixed: majority baseline, in-sample count, spurious-known count and no-trajectory count are columns and appear in the finding. |
+| S4, S5, S6, S7 | Fixed: caveats and a Metrics paragraph added; counts are computed, not typed. |
+| Nits | Wording fixed; rows are looked up by key. **TODO:** no test ties findings text to tables (the text is generated from the same rows, which limits the risk). |
+

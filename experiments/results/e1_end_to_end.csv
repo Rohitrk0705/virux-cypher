@@ -1,0 +1,7 @@
+historical knowledge,in-environment incidents,top1,correct,path reproduced by pipeline,true transitions
+MITRE groups (inferred order),none,0.000,0,47,90
+hand-written sequences (default),none,0.367,33,47,90
+"groups + hand-written, pooled",none,0.133,12,47,90
+hand-written minus own family's reference,none,0.167,15,47,90
+hand-written minus distractors overlapping D,none,0.278,25,47,90
+hand-written minus own family's reference and minus distractors overlapping D,none,0.078,7,47,90

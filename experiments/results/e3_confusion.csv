@@ -1,0 +1,13 @@
+trajectories,similarity,true class,predicted known,predicted variant,predicted novel,incidents
+ground-truth trajectories,temporal,known,9,0,0,9
+ground-truth trajectories,temporal,variant,0,7,2,9
+ground-truth trajectories,temporal,novel,0,0,6,6
+ground-truth trajectories,static,known,9,0,0,9
+ground-truth trajectories,static,variant,0,9,0,9
+ground-truth trajectories,static,novel,0,0,6,6
+pipeline trajectories,temporal,known,6,1,2,9
+pipeline trajectories,temporal,variant,2,3,4,9
+pipeline trajectories,temporal,novel,0,2,4,6
+pipeline trajectories,static,known,4,2,3,9
+pipeline trajectories,static,variant,2,4,3,9
+pipeline trajectories,static,novel,0,2,4,6

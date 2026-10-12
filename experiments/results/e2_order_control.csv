@@ -1,0 +1,5 @@
+trajectories,graph,"mean similarity, true order","mean similarity, reversed order",incidents told apart from their reversal,incidents
+ground-truth trajectories,static,0.875,0.875,0,18
+ground-truth trajectories,temporal,0.869,0.505,18,18
+pipeline trajectories,static,0.598,0.598,0,17
+pipeline trajectories,temporal,0.583,0.395,13,17

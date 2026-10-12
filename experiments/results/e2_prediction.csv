@@ -1,0 +1,17 @@
+trajectories,training data,graph,top1,top1_tie,top3,mrr,precision,recall,f1,correct,instances,incidents
+ground-truth trajectories,hand-written sequences,static,0.333,0.367,0.800,0.562,0.199,0.218,0.184,30,90,24
+ground-truth trajectories,hand-written sequences,temporal,0.722,0.676,0.789,0.752,0.523,0.572,0.543,65,90,24
+ground-truth trajectories,"groups + hand-written, pooled",static,0.244,0.244,0.311,0.327,0.112,0.167,0.126,22,90,24
+ground-truth trajectories,"groups + hand-written, pooled",temporal,0.311,0.286,0.411,0.423,0.249,0.225,0.236,28,90,24
+ground-truth trajectories,hand-written minus own family's reference,static,0.267,0.198,0.456,0.378,0.133,0.177,0.142,24,90,24
+ground-truth trajectories,hand-written minus own family's reference,temporal,0.278,0.261,0.444,0.357,0.302,0.290,0.287,25,90,24
+ground-truth trajectories,hand-written + all other incidents,static,0.400,0.426,0.789,0.607,0.237,0.307,0.254,36,90,24
+ground-truth trajectories,hand-written + all other incidents,temporal,0.811,0.800,0.833,0.822,0.634,0.650,0.639,73,90,24
+pipeline trajectories,hand-written sequences,static,0.243,0.271,0.657,0.456,0.110,0.145,0.109,17,70,20
+pipeline trajectories,hand-written sequences,temporal,0.471,0.450,0.557,0.517,0.278,0.303,0.283,33,70,20
+pipeline trajectories,"groups + hand-written, pooled",static,0.243,0.248,0.329,0.330,0.085,0.107,0.094,17,70,20
+pipeline trajectories,"groups + hand-written, pooled",temporal,0.171,0.179,0.200,0.251,0.118,0.123,0.116,12,70,20
+pipeline trajectories,hand-written minus own family's reference,static,0.200,0.171,0.371,0.312,0.093,0.122,0.096,14,70,20
+pipeline trajectories,hand-written minus own family's reference,temporal,0.186,0.177,0.371,0.275,0.207,0.147,0.163,13,70,20
+pipeline trajectories,hand-written + all other incidents,static,0.429,0.429,0.643,0.551,0.178,0.230,0.187,30,70,20
+pipeline trajectories,hand-written + all other incidents,temporal,0.557,0.538,0.600,0.586,0.302,0.324,0.308,39,70,20

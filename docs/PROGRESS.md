@@ -161,3 +161,42 @@ Figures that were wrong before the review and are now removed: "leave-pattern-ou
 Review: 4 Blocking (all fixed), 6 Should-fix (all addressed).
 
 TODO: the cached default predictor is not refreshed when the historical database is rebuilt in a running process.
+
+## M6 — the three experiments — done
+
+Run with `python -m experiments.run_all`. Reports and CSVs: `experiments/results/e1.md`, `e2.md`, `e3.md` plus one CSV per table. Sample throughout: 24 synthetic incidents from 4 templates; 90 next-step instances on ground-truth trajectories.
+
+**E1 — does historical knowledge improve prediction?** Only when the history already contains the attack.
+
+| Condition | Top-1 | Correct |
+|---|---|---|
+| No knowledge (analytic chance) | 0.005 | – |
+| Most frequent next step among other incidents | 0.156 | 14 / 90 |
+| History = hand-written sequences (contains the A–C templates) | 0.722 | 65 / 90 |
+| History = MITRE groups only | 0.000 | 0 / 90 |
+| History with the tested pattern's reference removed | 0.278 | 25 / 90 (A 0/18, B 11/24, C 0/24, D 14/24) |
+| …and with the distractors overlapping D removed | 0.133 | 12 / 90 |
+| Sibling incidents available, without / with history | 0.811 / 0.811 | 73 / 73 of 90 |
+| Strict end-to-end, label-free pipeline, default history | 0.367 | 33 / 90 |
+
+E1 does **not** show that history helps on unseen attacks, and says nothing about independently sourced threat intelligence.
+
+**E2 — does temporal order improve matching and prediction?** Not matching; prediction only when a memorised sequence can be replayed.
+
+- Matching: own reference is the unique top match for 17 / 18 incidents static and 17 / 18 temporal (pipeline: 10 / 18 both). **No improvement.**
+- Prediction with the reference in the history: Top-1 65 vs 30 of 90 in favour of temporal, but Top-3 0.789 vs 0.800.
+- Prediction with the reference removed: 25 vs 24 of 90, no difference; static has the higher MRR (0.378 vs 0.357).
+- On pipeline trajectories temporal has the higher Top-3 in 0 of 4 training conditions, and is worse on every metric with pooled group data (12 vs 17 of 70).
+
+**E3 — known vs variant vs novel.** Works on ground truth, not on the pipeline.
+
+| Input | Correct (leave-one-out thresholds) | Majority baseline | Novel taken for a match | Attack-free incidents taken for a match |
+|---|---|---|---|---|
+| Ground-truth trajectories, order-aware score | 22 / 24 | 9 / 24 | 0 / 6 | – |
+| Ground-truth trajectories, order-free score | 24 / 24 | 9 / 24 | 0 / 6 | – |
+| Pipeline trajectories, order-aware score | 13 / 24 | 9 / 24 | 2 / 6 | 3 / 22 |
+| Pipeline trajectories, order-free score | 12 / 24 | 9 / 24 | 2 / 6 | 2 / 22 |
+
+"Known" scores 1.000 by construction (verbatim copies of references). On ground truth the order-aware score is worse than the order-free one (22 vs 24).
+
+Review: 2 Blocking (both fixed; they were unsupported or missing sentences, not wrong numbers), 7 Should-fix (all fixed).
