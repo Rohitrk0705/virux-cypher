@@ -25,6 +25,7 @@ probabilities.
 """
 
 import json
+import os
 import re
 from bisect import bisect_left, bisect_right
 from collections import defaultdict
@@ -35,8 +36,9 @@ from .environment import BANK
 
 ROOT = Path(__file__).resolve().parent.parent
 TECHNIQUES_FILE = ROOT / "data" / "mitre" / "techniques.json"
-EVENTS_FILE = ROOT / "data" / "processed" / "events.json"
-MAPPED_FILE = ROOT / "data" / "processed" / "mapped.json"
+PROCESSED = ROOT / "data" / "processed" / os.getenv("VIRUX_DATASET", "")   # same switch as knowledge_graph.config
+EVENTS_FILE = PROCESSED / "events.json"
+MAPPED_FILE = PROCESSED / "mapped.json"
 
 BURST_MIN_FAILURES = 5
 BURST_WINDOW = 10 * 60

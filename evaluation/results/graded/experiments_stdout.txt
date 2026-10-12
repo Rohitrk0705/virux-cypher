@@ -1,0 +1,313 @@
+90 incidents, 399 instances; pipeline produced no trajectory for 3
+
+# E1 (redesigned) - Historical knowledge
+
+**Question:** Does historical attack knowledge improve next-step prediction, and does the benefit grow with how similar the history is to the attack?
+
+Sample: 90 synthetic incidents from 18 templates (5 each: 1 exact, 2 with one edit, 2 with two edits), one dataset, one seed; 399 next-step instances on ground-truth trajectories. Incidents of one template are not independent, so no confidence intervals are given; counts are shown instead. The first, 24-incident experiments are kept in experiments/results/.
+
+**Metrics:** top1: the true next technique is the first prediction (ties broken by technique id). top1_tie: the same, but a target tied for first with m - 1 others counts 1/m, which removes alphabetical luck. top3: the target is among the first three. mrr: mean of 1/rank over the model's full ranking, 0 if the target is not ranked (the API exposes only the top 5). precision / recall / f1: macro-averaged over the techniques that occur as targets, using the top prediction only. An instance is one prefix of one incident's trajectory; an incident with L steps gives L - 1 instances.
+
+## Next-step prediction on ground-truth trajectories, by what the history contains
+
+| history | model | top1 | top1_tie | top3 | mrr | precision | recall | f1 | correct | instances | incidents |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| no history at all (analytic chance) | - | 0.005 | 0.005 | 0.014 | 0.027 |  |  |  |  | uniform over 222 techniques |  |
+| other templates | frequency prior, no context | 0.138 | 0.138 | 0.246 | 0.257 | 0.005 | 0.038 | 0.009 | 55 | 399 | 90 |
+| other templates | frequency prior, no context, never repeats a seen step | 0.178 | 0.176 | 0.313 | 0.303 | 0.017 | 0.058 | 0.026 | 71 | 399 | 90 |
+| real plans | frequency prior, no context | 0.013 | 0.013 | 0.118 | 0.121 | 0.000 | 0.038 | 0.001 | 5 | 399 | 90 |
+| real plans | Markov, order 2 with back-off | 0.073 | 0.073 | 0.150 | 0.114 | 0.021 | 0.053 | 0.025 | 29 | 399 | 90 |
+| real plans, dataset vocabulary only | Markov, order 2 with back-off | 0.125 | 0.101 | 0.203 | 0.177 | 0.078 | 0.110 | 0.071 | 50 | 399 | 90 |
+| MITRE groups (unordered) | Markov, order 2 with back-off | 0.020 | 0.020 | 0.053 | 0.071 | 0.030 | 0.021 | 0.020 | 8 | 399 | 90 |
+| templates of other families | Markov, order 2 with back-off | 0.173 | 0.178 | 0.216 | 0.193 | 0.104 | 0.100 | 0.099 | 69 | 399 | 90 |
+| other templates | Markov, order 2 with back-off | 0.323 | 0.309 | 0.353 | 0.349 | 0.181 | 0.186 | 0.180 | 129 | 399 | 90 |
+| other templates + real plans | Markov, order 2 with back-off | 0.291 | 0.295 | 0.393 | 0.352 | 0.140 | 0.163 | 0.147 | 116 | 399 | 90 |
+| other templates + real plans, dataset vocabulary only | Markov, order 2 with back-off | 0.306 | 0.303 | 0.398 | 0.364 | 0.175 | 0.195 | 0.179 | 122 | 399 | 90 |
+| all templates (own included) | Markov, order 2 with back-off | 0.416 | 0.419 | 0.589 | 0.504 | 0.307 | 0.301 | 0.293 | 166 | 399 | 90 |
+| all templates + real plans | Markov, order 2 with back-off | 0.376 | 0.387 | 0.564 | 0.482 | 0.241 | 0.245 | 0.236 | 150 | 399 | 90 |
+| other templates | Markov, order 1 only | 0.338 | 0.319 | 0.363 | 0.366 | 0.192 | 0.195 | 0.188 | 135 | 399 | 90 |
+| all templates (own included) | Markov, order 1 only | 0.404 | 0.409 | 0.561 | 0.491 | 0.308 | 0.294 | 0.291 | 161 | 399 | 90 |
+
+## Where in the attack the gain is (history = other templates)
+
+| step being predicted | Markov correct | frequency prior correct | instances |
+|---|---|---|---|
+| 2 | 54 | 17 | 90 |
+| 3 | 26 | 28 | 90 |
+| 4 | 12 | 9 | 87 |
+| 5 | 13 | 1 | 67 |
+| 6 or later | 24 | 0 | 65 |
+
+## Per template (history = other templates)
+
+| template | family | nearest other template | similarity | Markov correct | frequency prior correct | instances |
+|---|---|---|---|---|---|---|
+| G01 | credential | G02 | 0.714 | 9 | 4 | 18 |
+| G02 | credential | G03 | 0.804 | 14 | 4 | 30 |
+| G03 | credential | G02 | 0.804 | 17 | 5 | 31 |
+| G04 | credential | G13 | 0.833 | 9 | 5 | 23 |
+| G05 | phishing | G08 | 0.619 | 9 | 3 | 15 |
+| G06 | phishing | G05 | 0.381 | 13 | 5 | 27 |
+| G07 | phishing | G05 | 0.438 | 12 | 5 | 25 |
+| G08 | phishing | G05 | 0.619 | 9 | 5 | 28 |
+| G09 | brute | G13 | 0.354 | 8 | 0 | 20 |
+| G10 | brute | G11 | 0.325 | 7 | 0 | 19 |
+| G11 | brute | G10 | 0.325 | 5 | 5 | 18 |
+| G12 | reorder | G01 | 0.700 | 4 | 5 | 21 |
+| G13 | reorder | G04 | 0.833 | 4 | 5 | 23 |
+| G14 | mid | G15 | 0.278 | 2 | 0 | 20 |
+| G15 | mid | G08 | 0.417 | 7 | 0 | 25 |
+| G16 | unrelated | G18 | 0.325 | 0 | 4 | 16 |
+| G17 | unrelated | G18 | 0.156 | 0 | 0 | 19 |
+| G18 | unrelated | G16 | 0.325 | 0 | 0 | 21 |
+
+## The same, by how similar the nearest other template is (history never contains the incident's own template)
+
+| history | similarity of the nearest other template | templates | top1 | top1_tie | top3 | mrr | correct | instances | incidents |
+|---|---|---|---|---|---|---|---|---|---|
+| other templates | 0.70 or more (near sibling) | G01 G02 G03 G04 G12 G13 | 0.390 | 0.355 | 0.459 | 0.446 | 57 | 146 | 30 |
+| other templates | 0.50 to 0.70 | G05 G08 | 0.419 | 0.407 | 0.465 | 0.448 | 18 | 43 | 10 |
+| other templates | 0.30 to 0.50 | G06 G07 G09 G10 G11 G15 G16 G18 | 0.304 | 0.304 | 0.304 | 0.308 | 52 | 171 | 40 |
+| other templates | under 0.30 (unrelated) | G14 G17 | 0.051 | 0.051 | 0.051 | 0.058 | 2 | 39 | 10 |
+| real plans | 0.70 or more (near sibling) | G01 G02 G03 G04 G12 G13 | 0.007 | 0.004 | 0.103 | 0.047 | 1 | 146 | 30 |
+| real plans | 0.50 to 0.70 | G05 G08 | 0.233 | 0.233 | 0.279 | 0.254 | 10 | 43 | 10 |
+| real plans | 0.30 to 0.50 | G06 G07 G09 G10 G11 G15 G16 G18 | 0.105 | 0.105 | 0.164 | 0.139 | 18 | 171 | 40 |
+| real plans | under 0.30 (unrelated) | G14 G17 | 0.000 | 0.021 | 0.128 | 0.096 | 0 | 39 | 10 |
+| other templates + real plans | 0.70 or more (near sibling) | G01 G02 G03 G04 G12 G13 | 0.349 | 0.341 | 0.479 | 0.432 | 51 | 146 | 30 |
+| other templates + real plans | 0.50 to 0.70 | G05 G08 | 0.395 | 0.395 | 0.442 | 0.429 | 17 | 43 | 10 |
+| other templates + real plans | 0.30 to 0.50 | G06 G07 G09 G10 G11 G15 G16 G18 | 0.281 | 0.289 | 0.374 | 0.324 | 48 | 171 | 40 |
+| other templates + real plans | under 0.30 (unrelated) | G14 G17 | 0.000 | 0.033 | 0.103 | 0.093 | 0 | 39 | 10 |
+| other templates, context removed (frequency prior) | 0.70 or more (near sibling) | G01 G02 G03 G04 G12 G13 | 0.192 | 0.192 | 0.445 | 0.367 | 28 | 146 | 30 |
+| other templates, context removed (frequency prior) | 0.50 to 0.70 | G05 G08 | 0.186 | 0.186 | 0.186 | 0.307 | 8 | 43 | 10 |
+| other templates, context removed (frequency prior) | 0.30 to 0.50 | G06 G07 G09 G10 G11 G15 G16 G18 | 0.111 | 0.111 | 0.146 | 0.198 | 19 | 171 | 40 |
+| other templates, context removed (frequency prior) | under 0.30 (unrelated) | G14 G17 | 0.000 | 0.000 | 0.000 | 0.045 | 0 | 39 | 10 |
+
+## By how much the instance was perturbed
+
+| history | instance | top1 | top1_tie | top3 | mrr | correct | instances | incidents |
+|---|---|---|---|---|---|---|---|---|
+| all templates (own included) | exact | 0.651 | 0.647 | 0.940 | 0.795 | 54 | 83 | 18 |
+| all templates (own included) | heavy | 0.289 | 0.298 | 0.403 | 0.347 | 46 | 159 | 36 |
+| all templates (own included) | light | 0.420 | 0.420 | 0.592 | 0.510 | 66 | 157 | 36 |
+| other templates | exact | 0.434 | 0.410 | 0.458 | 0.456 | 36 | 83 | 18 |
+| other templates | heavy | 0.258 | 0.255 | 0.289 | 0.284 | 41 | 159 | 36 |
+| other templates | light | 0.331 | 0.311 | 0.363 | 0.359 | 52 | 157 | 36 |
+
+## Strict end-to-end with the label-free pipeline
+
+| history | top1 | correct | path reproduced by pipeline | instances |
+|---|---|---|---|---|
+| real plans | 0.038 | 15 | 171 | 399 |
+| other templates | 0.195 | 78 | 171 | 399 |
+| all templates (own included) | 0.218 | 87 | 171 | 399 |
+
+## The 18 templates and their nearest relatives
+
+| template | family | nearest other template | similarity | bin | reference |
+|---|---|---|---|---|---|
+| G01 | credential | G02 | 0.714 | 0.70 or more (near sibling) | T1078 > T1059 > T1082 > T1068 > T1021 |
+| G02 | credential | G03 | 0.804 | 0.70 or more (near sibling) | T1078 > T1059 > T1082 > T1068 > T1021 > T1005 > T1041 |
+| G03 | credential | G02 | 0.804 | 0.70 or more (near sibling) | T1078 > T1059 > T1082 > T1003 > T1021 > T1005 > T1041 |
+| G04 | credential | G13 | 0.833 | 0.70 or more (near sibling) | T1078 > T1059 > T1082 > T1083 > T1560 > T1041 |
+| G05 | phishing | G08 | 0.619 | 0.50 to 0.70 | T1566 > T1204 > T1059 > T1003 > T1021 |
+| G06 | phishing | G05 | 0.381 | 0.30 to 0.50 | T1566 > T1204 > T1059 > T1547 > T1082 > T1005 > T1041 |
+| G07 | phishing | G05 | 0.438 | 0.30 to 0.50 | T1566 > T1204 > T1059 > T1105 > T1490 > T1486 |
+| G08 | phishing | G05 | 0.619 | 0.50 to 0.70 | T1566 > T1204 > T1059 > T1057 > T1068 > T1021 |
+| G09 | brute | G13 | 0.354 | 0.30 to 0.50 | T1110 > T1078 > T1083 > T1005 > T1041 |
+| G10 | brute | G11 | 0.325 | 0.30 to 0.50 | T1110 > T1078 > T1021 > T1490 > T1486 |
+| G11 | brute | G10 | 0.325 | 0.30 to 0.50 | T1110 > T1078 > T1059 > T1087 > T1136 |
+| G12 | reorder | G01 | 0.700 | 0.70 or more (near sibling) | T1078 > T1082 > T1059 > T1021 > T1068 |
+| G13 | reorder | G04 | 0.833 | 0.70 or more (near sibling) | T1078 > T1082 > T1083 > T1059 > T1560 > T1041 |
+| G14 | mid | G15 | 0.278 | under 0.30 (unrelated) | T1078 > T1053 > T1057 > T1003 > T1070 |
+| G15 | mid | G08 | 0.417 | 0.30 to 0.50 | T1566 > T1204 > T1053 > T1057 > T1016 > T1041 |
+| G16 | unrelated | G18 | 0.325 | 0.30 to 0.50 | T1133 > T1059 > T1016 > T1033 > T1048 |
+| G17 | unrelated | G18 | 0.156 | under 0.30 (unrelated) | T1133 > T1569 > T1547 > T1070 > T1685 |
+| G18 | unrelated | G16 | 0.325 | 0.30 to 0.50 | T1133 > T1087 > T1018 > T1560 > T1048 |
+
+## What the numbers show
+
+- Reference points. Chance is 0.005. A frequency prior built from the other 17 templates with all context removed gets 55 of 399 (top-1 0.138); it always proposes the same technique. The same prior that never repeats a seen step gets 71. Both priors use the author-written templates, so they are not 'no history'.
+- History of similar but not identical attacks (the other 17 templates, never the incident's own), with context: 129 of 399 (top-1 0.323, tie-aware 0.309, top-3 0.353), +74 against the prior.
+- Most of that gain is replay of entry sequences shared inside a family: 80 of the 129 correct predictions are of the 2nd or 3rd step. With every template of the incident's own family removed from the history, the model gets 69 of 399 (+14 against the prior).
+- By how similar the nearest other template is (Markov against the prior): 0.70 or more (near sibling): 57 against 28 of 146; 0.50 to 0.70: 18 against 8 of 43; 0.30 to 0.50: 52 against 19 of 171; under 0.30 (unrelated): 2 against 0 of 39. The benefit is absent for unrelated templates but does NOT grow steadily with similarity. For 3 of 18 templates history makes prediction worse than the prior (G12, G13, G16). The templates that reorder another one are among them: the model replays the twin's order.
+- Real ordered emulation plans as the only history: 29 of 399 with context, 5 as a context-free prior. They beat chance, but stay below the in-vocabulary template prior (55). Added to the other templates they lower the count from 129 to 116; restricted to the dataset's vocabulary, 50 alone and 122 pooled. Coverage: 26 of the dataset's 29 parent techniques occur in the plans; 39 of the plans' 65 do not occur in the dataset; 61 of 399 test transitions occur as adjacent steps in at least one plan.
+- MITRE group technique lists (no order) as history: 8 of 399.
+- History that contains the incident's own template: 166 of 399 (top-1 0.416). By instance: exact 54 of 83 (0.651); heavy 46 of 159 (0.289); light 66 of 157 (0.420).
+- Second-order context adds nothing for related history: order 1 alone gets 135 against 129.
+- Strict end-to-end with the label-free pipeline: real plans: 15 of 399 (0.038); other templates: 78 of 399 (0.195); all templates (own included): 87 of 399 (0.218).
+
+## Caveats
+
+- What E1 supports: a Markov table built from related attacks in the same technique vocabulary predicts the next step better than a context-free prior, mainly by replaying shared entry sequences. What it does not support: that the benefit grows with similarity, or that independently written history (the real emulation plans) helps.
+- The templates, their shared prefixes and the similarity between them were all designed by the author of this project. 'Other templates' is a controlled stand-in for 'the history contains related attacks'.
+- The eight real plans are emulation plans written from public reporting; their order is the plan's, not telemetry. One (APT29) is two scenarios back to back, one (FIN6) lists alternative end phases one after the other, and three have no initial-access step. They have 18 to 65 steps against 5 to 7 for a template.
+- One template is 5 incidents and 15 to 31 prediction instances; a similarity bin can hold as few as two templates. Per-template counts are in the table.
+- The model is the same Markov table with back-off in every 'Markov' row; only its training data changes.
+
+
+====================================================================================================
+
+# E2 (redesigned) - Temporal information
+
+**Question:** Does temporal ordering improve matching and prediction, compared with a static (order-free) graph?
+
+Sample: 90 synthetic incidents from 18 templates (5 each: 1 exact, 2 with one edit, 2 with two edits), one dataset, one seed; 399 next-step instances on ground-truth trajectories. Incidents of one template are not independent, so no confidence intervals are given; counts are shown instead. The first, 24-incident experiments are kept in experiments/results/.
+
+**Metrics:** top1: the true next technique is the first prediction (ties broken by technique id). top1_tie: the same, but a target tied for first with m - 1 others counts 1/m, which removes alphabetical luck. top3: the target is among the first three. mrr: mean of 1/rank over the model's full ranking, 0 if the target is not ranked (the API exposes only the top 5). precision / recall / f1: macro-averaged over the techniques that occur as targets, using the top prediction only. An instance is one prefix of one incident's trajectory; an incident with L steps gives L - 1 instances.
+
+## Historical matching against the 18 template references
+
+| trajectories | incidents scored | graph | own template is the unique top match | own template is top or tied for top | incidents | accuracy (unique) |
+|---|---|---|---|---|---|---|
+| ground-truth trajectories | all incidents | static | 69 | 90 | 90 | 0.767 |
+| ground-truth trajectories | all incidents | temporal | 81 | 88 | 90 | 0.900 |
+| ground-truth trajectories | all except the reordered templates | static | 69 | 70 | 70 | 0.986 |
+| ground-truth trajectories | all except the reordered templates | temporal | 69 | 70 | 70 | 0.986 |
+| ground-truth trajectories | perturbed instances only | static | 55 | 72 | 72 | 0.764 |
+| ground-truth trajectories | perturbed instances only | temporal | 63 | 70 | 72 | 0.875 |
+| ground-truth trajectories | templates that reorder another template | static | 0 | 20 | 20 | 0.000 |
+| ground-truth trajectories | templates that reorder another template | temporal | 12 | 18 | 20 | 0.600 |
+| pipeline trajectories | all incidents | static | 41 | 71 | 90 | 0.456 |
+| pipeline trajectories | all incidents | temporal | 52 | 65 | 90 | 0.578 |
+| pipeline trajectories | all except the reordered templates | static | 41 | 52 | 70 | 0.586 |
+| pipeline trajectories | all except the reordered templates | temporal | 41 | 49 | 70 | 0.586 |
+| pipeline trajectories | perturbed instances only | static | 29 | 54 | 72 | 0.403 |
+| pipeline trajectories | perturbed instances only | temporal | 36 | 48 | 72 | 0.500 |
+| pipeline trajectories | templates that reorder another template | static | 0 | 19 | 20 | 0.000 |
+| pipeline trajectories | templates that reorder another template | temporal | 11 | 16 | 20 | 0.550 |
+
+## Next-step prediction: order-free co-occurrence vs Markov transitions
+
+| trajectories | history | graph | top1 | top1_tie | top3 | mrr | precision | recall | f1 | correct | instances | incidents |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| ground-truth trajectories | other templates | static | 0.271 | 0.288 | 0.431 | 0.385 | 0.096 | 0.133 | 0.105 | 108 | 399 | 90 |
+| ground-truth trajectories | other templates | temporal | 0.323 | 0.309 | 0.353 | 0.349 | 0.181 | 0.186 | 0.180 | 129 | 399 | 90 |
+| ground-truth trajectories | other templates | temporal, ranking padded with shorter-context candidates | 0.331 | 0.310 | 0.406 | 0.417 | 0.183 | 0.192 | 0.184 | 132 | 399 | 90 |
+| ground-truth trajectories | all templates (own included) | static | 0.396 | 0.394 | 0.581 | 0.538 | 0.199 | 0.224 | 0.185 | 158 | 399 | 90 |
+| ground-truth trajectories | all templates (own included) | temporal | 0.416 | 0.419 | 0.589 | 0.504 | 0.307 | 0.301 | 0.293 | 166 | 399 | 90 |
+| ground-truth trajectories | all templates (own included) | temporal, ranking padded with shorter-context candidates | 0.416 | 0.419 | 0.627 | 0.551 | 0.305 | 0.301 | 0.292 | 166 | 399 | 90 |
+| ground-truth trajectories | real plans | static | 0.028 | 0.032 | 0.058 | 0.103 | 0.001 | 0.038 | 0.002 | 11 | 399 | 90 |
+| ground-truth trajectories | real plans | temporal | 0.073 | 0.073 | 0.150 | 0.114 | 0.021 | 0.053 | 0.025 | 29 | 399 | 90 |
+| ground-truth trajectories | real plans | temporal, ranking padded with shorter-context candidates | 0.073 | 0.073 | 0.150 | 0.165 | 0.021 | 0.053 | 0.025 | 29 | 399 | 90 |
+| pipeline trajectories | other templates | static | 0.282 | 0.292 | 0.459 | 0.397 | 0.097 | 0.131 | 0.108 | 94 | 333 | 82 |
+| pipeline trajectories | other templates | temporal | 0.300 | 0.296 | 0.351 | 0.333 | 0.160 | 0.155 | 0.155 | 100 | 333 | 82 |
+| pipeline trajectories | other templates | temporal, ranking padded with shorter-context candidates | 0.306 | 0.297 | 0.432 | 0.412 | 0.161 | 0.162 | 0.158 | 102 | 333 | 82 |
+| pipeline trajectories | all templates (own included) | static | 0.366 | 0.362 | 0.538 | 0.481 | 0.188 | 0.221 | 0.170 | 122 | 333 | 82 |
+| pipeline trajectories | all templates (own included) | temporal | 0.324 | 0.338 | 0.447 | 0.391 | 0.217 | 0.213 | 0.199 | 108 | 333 | 82 |
+| pipeline trajectories | all templates (own included) | temporal, ranking padded with shorter-context candidates | 0.324 | 0.339 | 0.514 | 0.458 | 0.216 | 0.213 | 0.198 | 108 | 333 | 82 |
+| pipeline trajectories | real plans | static | 0.006 | 0.012 | 0.036 | 0.075 | 0.000 | 0.043 | 0.001 | 2 | 333 | 82 |
+| pipeline trajectories | real plans | temporal | 0.087 | 0.083 | 0.141 | 0.114 | 0.039 | 0.059 | 0.040 | 29 | 333 | 82 |
+| pipeline trajectories | real plans | temporal, ranking padded with shorter-context candidates | 0.087 | 0.083 | 0.144 | 0.169 | 0.039 | 0.059 | 0.040 | 29 | 333 | 82 |
+
+## What the numbers show
+
+- Matching, ground-truth trajectories: on the four templates that are reorderings of each other, order finds the right one for 12 of 20 incidents against 0 without order. That holds by construction: the pairs contain the same techniques. On the other 70 incidents order changes nothing (69 without, 69 with).
+- Prediction, ground-truth trajectories, history = other templates: top-1 108 of 399 without order, 129 with order (+21). Top-3 0.431 vs 0.353 and MRR 0.385 vs 0.349; with the Markov ranking padded to a comparable length, top-3 0.406 and MRR 0.417.
+- Prediction, ground-truth trajectories, history = all templates (own included): top-1 158 of 399 without order, 166 with order (+8). Top-3 0.581 vs 0.589 and MRR 0.538 vs 0.504; with the Markov ranking padded to a comparable length, top-3 0.627 and MRR 0.551.
+- Matching, pipeline trajectories: on the four templates that are reorderings of each other, order finds the right one for 11 of 20 incidents against 0 without order. That holds by construction: the pairs contain the same techniques. On the other 70 incidents order changes nothing (41 without, 41 with).
+- Prediction, pipeline trajectories, history = other templates: top-1 94 of 333 without order, 100 with order (+6). Top-3 0.459 vs 0.351 and MRR 0.397 vs 0.333; with the Markov ranking padded to a comparable length, top-3 0.432 and MRR 0.412.
+- Prediction, pipeline trajectories, history = all templates (own included): top-1 122 of 333 without order, 108 with order (-14). Top-3 0.538 vs 0.447 and MRR 0.481 vs 0.391; with the Markov ranking padded to a comparable length, top-3 0.514 and MRR 0.458.
+- Prediction on the four reordered templates only (ground truth, history = other templates): 26 of 85 with order against 24 without. Order gives no clear advantage here: the history contains the twin with the other order, and the order-aware model tends to follow it.
+
+## Caveats
+
+- What E2 supports: order separates two attacks that contain the same techniques, and gives a modest top-1 gain in prediction. What it does not support: a general gain in matching (none outside the reordered pairs) or in ranked prediction.
+- Two template pairs (G01/G12 and G04/G13) contain exactly the same techniques in a different order. Without order their references are indistinguishable, so a tie is the best a static match can do. The result on them demonstrates the mechanism; it was built into the dataset.
+- The plain Markov ranking lists only continuations seen after the matched context, often one or two, while the static predictor ranks every co-occurring technique. Top-3 and MRR therefore favour the static predictor for a reason unrelated to order; the padded row removes most of that difference.
+- 'Static' and 'temporal' are two scoring rules over the same data: set overlap vs overlap plus edit distance for matching; co-occurrence vs Markov transitions for prediction.
+- On pipeline trajectories the prediction target is the pipeline's own next step, mapping errors included; those rows compare the two rules on the same noisy input and are not end-to-end accuracy.
+
+
+====================================================================================================
+
+# E3 (redesigned) - Similarity discrimination
+
+**Question:** Can the system tell a known attack, a modified variant and a previously unseen attack apart?
+
+Sample: 90 synthetic incidents from 18 templates (5 each: 1 exact, 2 with one edit, 2 with two edits), one dataset, one seed; 399 next-step instances on ground-truth trajectories. Incidents of one template are not independent, so no confidence intervals are given; counts are shown instead. The first, 24-incident experiments are kept in experiments/results/.
+
+**Metrics:** top1: the true next technique is the first prediction (ties broken by technique id). top1_tie: the same, but a target tied for first with m - 1 others counts 1/m, which removes alphabetical luck. top3: the target is among the first three. mrr: mean of 1/rank over the model's full ranking, 0 if the target is not ranked (the API exposes only the top 5). precision / recall / f1: macro-averaged over the techniques that occur as targets, using the top prediction only. An instance is one prefix of one incident's trajectory; an incident with L steps gives L - 1 instances.
+
+## Three-way classification from best similarity to the 12 in-history templates
+
+| trajectories | similarity | correct (leave-one-out thresholds) | incidents | accuracy | majority-class baseline | correct with in-sample thresholds | novel called known or variant | novel incidents | near-novel called novel | far-novel called novel | AUC known vs variant | AUC (known + variant) vs novel | attack-free incidents called known or variant |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| ground-truth trajectories | temporal | 60 | 78 | 0.769 | 30 | 65 | 11 | 30 | 4 / 15 | 15 / 15 | 0.948 | 0.872 | n/a |
+| ground-truth trajectories | static | 38 | 78 | 0.487 | 30 | 53 | 9 | 30 | 6 / 15 | 15 / 15 | 0.718 | 0.896 | n/a |
+| pipeline trajectories | temporal | 30 | 78 | 0.385 | 30 | 38 | 12 | 30 | 3 / 15 | 15 / 15 | 0.594 | 0.638 | 6 / 87 |
+| pipeline trajectories | static | 40 | 78 | 0.513 | 30 | 41 | 9 | 30 | 6 / 15 | 15 / 15 | 0.516 | 0.671 | 7 / 87 |
+
+## Confusion matrices (leave-one-out thresholds)
+
+| trajectories | similarity | true class | predicted known | predicted variant | predicted novel | incidents |
+|---|---|---|---|---|---|---|
+| ground-truth trajectories | temporal | known | 24 | 0 | 0 | 24 |
+| ground-truth trajectories | temporal | variant | 3 | 17 | 4 | 24 |
+| ground-truth trajectories | temporal | novel | 4 | 7 | 19 | 30 |
+| ground-truth trajectories | static | known | 13 | 11 | 0 | 24 |
+| ground-truth trajectories | static | variant | 17 | 4 | 3 | 24 |
+| ground-truth trajectories | static | novel | 3 | 6 | 21 | 30 |
+| pipeline trajectories | temporal | known | 12 | 4 | 8 | 24 |
+| pipeline trajectories | temporal | variant | 11 | 0 | 13 | 24 |
+| pipeline trajectories | temporal | novel | 9 | 3 | 18 | 30 |
+| pipeline trajectories | static | known | 15 | 0 | 9 | 24 |
+| pipeline trajectories | static | variant | 11 | 4 | 9 | 24 |
+| pipeline trajectories | static | novel | 6 | 3 | 21 | 30 |
+
+## Best similarity per class
+
+| trajectories | similarity | class | min | mean | max | incidents |
+|---|---|---|---|---|---|---|
+| ground-truth trajectories | temporal | known | 0.800 | 0.822 | 0.875 | 24 |
+| ground-truth trajectories | temporal | variant | 0.600 | 0.706 | 0.812 | 24 |
+| ground-truth trajectories | temporal | novel | 0.056 | 0.406 | 0.833 | 30 |
+| ground-truth trajectories | temporal | exact instance (not classified) | 1.000 | 1.000 | 1.000 | 12 |
+| ground-truth trajectories | temporal | novel, near (G02 G08 G13) | 0.472 | 0.660 | 0.833 | 15 |
+| ground-truth trajectories | temporal | novel, far (G16 G17 G18) | 0.056 | 0.152 | 0.267 | 15 |
+| ground-truth trajectories | static | known | 0.800 | 0.883 | 1.000 | 24 |
+| ground-truth trajectories | static | variant | 0.600 | 0.802 | 1.000 | 24 |
+| ground-truth trajectories | static | novel | 0.091 | 0.410 | 1.000 | 30 |
+| ground-truth trajectories | static | exact instance (not classified) | 1.000 | 1.000 | 1.000 | 12 |
+| ground-truth trajectories | static | novel, near (G02 G08 G13) | 0.444 | 0.692 | 1.000 | 15 |
+| ground-truth trajectories | static | novel, far (G16 G17 G18) | 0.091 | 0.127 | 0.200 | 15 |
+| pipeline trajectories | temporal | known | 0.000 | 0.541 | 1.000 | 24 |
+| pipeline trajectories | temporal | variant | 0.183 | 0.489 | 0.750 | 24 |
+| pipeline trajectories | temporal | novel | 0.000 | 0.422 | 0.750 | 30 |
+| pipeline trajectories | temporal | exact instance (not classified) | 0.400 | 0.679 | 1.000 | 12 |
+| pipeline trajectories | temporal | novel, near (G02 G08 G13) | 0.343 | 0.579 | 0.750 | 15 |
+| pipeline trajectories | temporal | novel, far (G16 G17 G18) | 0.000 | 0.264 | 0.464 | 15 |
+| pipeline trajectories | temporal | attack-free inferred incident | 0.183 | 0.333 | 0.700 | 87 |
+| pipeline trajectories | static | known | 0.000 | 0.559 | 1.000 | 24 |
+| pipeline trajectories | static | variant | 0.167 | 0.553 | 0.857 | 24 |
+| pipeline trajectories | static | novel | 0.000 | 0.432 | 1.000 | 30 |
+| pipeline trajectories | static | exact instance (not classified) | 0.400 | 0.670 | 1.000 | 12 |
+| pipeline trajectories | static | novel, near (G02 G08 G13) | 0.286 | 0.606 | 1.000 | 15 |
+| pipeline trajectories | static | novel, far (G16 G17 G18) | 0.000 | 0.258 | 0.429 | 15 |
+| pipeline trajectories | static | attack-free inferred incident | 0.167 | 0.349 | 0.800 | 87 |
+
+## How the ground-truth result moves with the choice of held-out templates
+
+| similarity | held-out sets tried | incidents | fewest correct | median correct | most correct | the set used here |
+|---|---|---|---|---|---|---|
+| temporal | 100 | 78 | 51 | 66 | 76 | 60 |
+| static | 100 | 78 | 31 | 50 | 66 | 38 |
+
+## What the numbers show
+
+- ground-truth trajectories: 60 of 78 classified correctly with the order-aware score (majority-class baseline 30; 65 with thresholds fitted on all incidents); 38 with the order-free score. 11 of 30 novel incidents were taken for a known or variant attack; near-novel recognised as novel 4 / 15, far-novel 15 / 15. AUC known vs variant 0.948; AUC (known + variant) vs novel 0.872.
+- pipeline trajectories: 30 of 78 classified correctly with the order-aware score (majority-class baseline 30; 38 with thresholds fitted on all incidents); 40 with the order-free score. 12 of 30 novel incidents were taken for a known or variant attack; near-novel recognised as novel 3 / 15, far-novel 15 / 15. AUC known vs variant 0.594; AUC (known + variant) vs novel 0.638. Of the pipeline's incidents with no attack in them, 6 / 87 would be called a known or variant attack.
+- Sensitivity to which six templates are held out (ground truth, 100 random sets): order-aware 51 to 76 of 78 correct (median 66); order-free 31 to 66 (median 50). The order-aware score was ahead in 100 of 100 sets. The set used here gives 60 and 38.
+
+## Caveats
+
+- What E3 supports: unrelated attacks are recognised as novel; the order-aware score is better than the order-free one across held-out choices. What it does not support: telling a near relative of a known attack from a variant of it, or anything on the label-free pipeline.
+- Known versus variant is close to arithmetic. One edit to a 5-, 6- or 7-step template gives a similarity of 0.800 to 0.875 to its own reference by the definition of the score; two edits give less. The classifier is largely recovering the number of edits. Only the novel boundary is informative.
+- Classes: known = an instance with ONE edit of a template that is in the history; variant = TWO edits; novel = any instance of the six templates left out of the history. The 12 exact (verbatim) instances of in-history templates are not classified; their scores are listed separately. This removes the tautology of the first E3, where 'known' meant a verbatim copy.
+- Three of the six novel templates were chosen to be near relatives of in-history ones (G02 extends G01, G08 shares the phishing entry of G05 and the ending of G01, G13 reorders G04) and three to be unrelated. A system that calls a near relative 'variant' is arguably right; the near/far split shows where the novel errors are.
+- The known / variant boundary is one edit vs two on sequences of 5 to 7 steps, a narrow margin by design.
+- Thresholds are chosen by leave-one-out; the in-sample count shows how much they move.
+- Which six templates are held out was fixed before any result was computed and not varied.
+
+
+====================================================================================================
+

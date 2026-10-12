@@ -59,17 +59,18 @@ def trajectory_ids(trajectory):
     return [step["id"] for step in trajectory["techniques"]]
 
 
-def match_historical(trajectory, top_k=TOP_K, mode="temporal", sources=None, exclude=()):
+def match_historical(trajectory, top_k=TOP_K, mode="temporal", sources=None, exclude=(), records=None):
     """Attack Trajectory (contract 3) -> Historical Match (contract 4).
 
     common_techniques lists the incident's own technique ids (sub-technique
     form kept) whose parent also occurs in the historical attack, in the order
     they occur in the incident. exclude: attack ids to leave out (evaluation).
+    records: match against these [{attack_id, sequence}] instead of the stored database.
     """
     original = trajectory_ids(trajectory)
     sequence = to_sequence(original)
     scored = []
-    for record in historical(sources):
+    for record in (historical(sources) if records is None else records):
         if record["attack_id"] in exclude:
             continue
         score = similarity(sequence, record["sequence"], mode) if sequence else 0.0

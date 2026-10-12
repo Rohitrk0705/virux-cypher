@@ -1,0 +1,16 @@
+history,model,top1,top1_tie,top3,mrr,precision,recall,f1,correct,instances,incidents
+no history at all (analytic chance),-,0.005,0.005,0.014,0.027,,,,,uniform over 222 techniques,
+other templates,"frequency prior, no context",0.138,0.138,0.246,0.257,0.005,0.038,0.009,55,399,90
+other templates,"frequency prior, no context, never repeats a seen step",0.178,0.176,0.313,0.303,0.017,0.058,0.026,71,399,90
+real plans,"frequency prior, no context",0.013,0.013,0.118,0.121,0.000,0.038,0.001,5,399,90
+real plans,"Markov, order 2 with back-off",0.073,0.073,0.150,0.114,0.021,0.053,0.025,29,399,90
+"real plans, dataset vocabulary only","Markov, order 2 with back-off",0.125,0.101,0.203,0.177,0.078,0.110,0.071,50,399,90
+MITRE groups (unordered),"Markov, order 2 with back-off",0.020,0.020,0.053,0.071,0.030,0.021,0.020,8,399,90
+templates of other families,"Markov, order 2 with back-off",0.173,0.178,0.216,0.193,0.104,0.100,0.099,69,399,90
+other templates,"Markov, order 2 with back-off",0.323,0.309,0.353,0.349,0.181,0.186,0.180,129,399,90
+other templates + real plans,"Markov, order 2 with back-off",0.291,0.295,0.393,0.352,0.140,0.163,0.147,116,399,90
+"other templates + real plans, dataset vocabulary only","Markov, order 2 with back-off",0.306,0.303,0.398,0.364,0.175,0.195,0.179,122,399,90
+all templates (own included),"Markov, order 2 with back-off",0.416,0.419,0.589,0.504,0.307,0.301,0.293,166,399,90
+all templates + real plans,"Markov, order 2 with back-off",0.376,0.387,0.564,0.482,0.241,0.245,0.236,150,399,90
+other templates,"Markov, order 1 only",0.338,0.319,0.363,0.366,0.192,0.195,0.188,135,399,90
+all templates (own included),"Markov, order 1 only",0.404,0.409,0.561,0.491,0.308,0.294,0.291,161,399,90

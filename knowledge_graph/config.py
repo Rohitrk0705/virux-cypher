@@ -12,7 +12,10 @@ NEO4J_URI = os.getenv("NEO4J_URI", "bolt://localhost:7687")
 NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
 NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "viruxcypher")
 
-PROCESSED_DIR = ROOT / "data" / "processed"
+# Which dataset the pipeline reads. Empty = the default 24-incident benchmark in
+# data/processed/. VIRUX_DATASET=graded selects data/processed/graded/ (M10).
+DATASET = os.getenv("VIRUX_DATASET", "")
+PROCESSED_DIR = ROOT / "data" / "processed" / DATASET
 EVENTS_FILE = PROCESSED_DIR / "events.json"
 LABELS_FILE = PROCESSED_DIR / "labels.json"
 INCIDENTS_FILE = PROCESSED_DIR / "incidents.json"  # evaluation ground truth only

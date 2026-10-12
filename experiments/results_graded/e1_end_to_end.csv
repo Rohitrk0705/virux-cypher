@@ -1,0 +1,4 @@
+history,top1,correct,path reproduced by pipeline,instances
+real plans,0.038,15,171,399
+other templates,0.195,78,171,399
+all templates (own included),0.218,87,171,399

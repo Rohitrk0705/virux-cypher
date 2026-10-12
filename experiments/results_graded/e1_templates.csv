@@ -1,0 +1,19 @@
+template,family,nearest other template,similarity,bin,reference
+G01,credential,G02,0.714,0.70 or more (near sibling),T1078 > T1059 > T1082 > T1068 > T1021
+G02,credential,G03,0.804,0.70 or more (near sibling),T1078 > T1059 > T1082 > T1068 > T1021 > T1005 > T1041
+G03,credential,G02,0.804,0.70 or more (near sibling),T1078 > T1059 > T1082 > T1003 > T1021 > T1005 > T1041
+G04,credential,G13,0.833,0.70 or more (near sibling),T1078 > T1059 > T1082 > T1083 > T1560 > T1041
+G05,phishing,G08,0.619,0.50 to 0.70,T1566 > T1204 > T1059 > T1003 > T1021
+G06,phishing,G05,0.381,0.30 to 0.50,T1566 > T1204 > T1059 > T1547 > T1082 > T1005 > T1041
+G07,phishing,G05,0.438,0.30 to 0.50,T1566 > T1204 > T1059 > T1105 > T1490 > T1486
+G08,phishing,G05,0.619,0.50 to 0.70,T1566 > T1204 > T1059 > T1057 > T1068 > T1021
+G09,brute,G13,0.354,0.30 to 0.50,T1110 > T1078 > T1083 > T1005 > T1041
+G10,brute,G11,0.325,0.30 to 0.50,T1110 > T1078 > T1021 > T1490 > T1486
+G11,brute,G10,0.325,0.30 to 0.50,T1110 > T1078 > T1059 > T1087 > T1136
+G12,reorder,G01,0.700,0.70 or more (near sibling),T1078 > T1082 > T1059 > T1021 > T1068
+G13,reorder,G04,0.833,0.70 or more (near sibling),T1078 > T1082 > T1083 > T1059 > T1560 > T1041
+G14,mid,G15,0.278,under 0.30 (unrelated),T1078 > T1053 > T1057 > T1003 > T1070
+G15,mid,G08,0.417,0.30 to 0.50,T1566 > T1204 > T1053 > T1057 > T1016 > T1041
+G16,unrelated,G18,0.325,0.30 to 0.50,T1133 > T1059 > T1016 > T1033 > T1048
+G17,unrelated,G18,0.156,under 0.30 (unrelated),T1133 > T1569 > T1547 > T1070 > T1685
+G18,unrelated,G16,0.325,0.30 to 0.50,T1133 > T1087 > T1018 > T1560 > T1048

@@ -1,0 +1,386 @@
+loaded 17707 events, 990 ground-truth technique mappings, 1478 mapper technique mappings
+
+=== graph statistics ===
+nodes:
+  Device           11
+  Event         17707
+  IP              491
+  Incident       1827
+  Process          35
+  Tactic           13
+  Technique        33
+  User             10
+  total         20127
+relationships:
+  BELONGS_TO       33
+  EXECUTED       5986
+  INVOLVES      28645
+  MAPS_TO        2468
+  NEXT           6197
+  OCCURRED_ON   17707
+  PART_OF        8024
+  PERFORMED     17707
+  total         86767
+hubs (>= 4 distinct users, ignored when linking): 40
+  Device SRV-DB01        8 users
+  Device SRV-DC01        6 users
+  Device SRV-FILE01      9 users
+  Device SRV-MAIL01      9 users
+  Device WS-06           4 users
+  IP     10.0.0.16       4 users
+  IP     10.0.0.2        8 users
+  IP     10.0.0.3        9 users
+  IP     10.0.0.4        9 users
+  IP     10.0.0.5        9 users
+  plus 30 external addresses: 192.0.2.10, 192.0.2.11, 192.0.2.12, 192.0.2.13, 192.0.2.14, 192.0.2.15, 192.0.2.16, 192.0.2.17, 192.0.2.18, 192.0.2.19, 192.0.2.20, 192.0.2.21, 192.0.2.22, 192.0.2.23, 192.0.2.24, 192.0.2.25, 192.0.2.26, 192.0.2.27, 192.0.2.28, 192.0.2.29, 192.0.2.30, 192.0.2.31, 192.0.2.32, 192.0.2.33, 192.0.2.34, 192.0.2.35, 192.0.2.36, 192.0.2.37, 192.0.2.38, 192.0.2.39
+inferred incidents at W=30 min (Incident nodes, with PART_OF and NEXT edges per method):
+  heuristic 1536 incidents from 7064 candidate events
+  mapper     186 incidents from 1478 candidate events
+  labels     105 incidents from 990 candidate events
+
+=== incident inference vs ground truth (n = 90 true incidents) ===
+method     W(min) inferred    false     incP   merged    exact   trajGT  trajMap coverage   purity  jaccard    pairP     atkP     atkR    atkF1
+-----------------------------------------------------------------------------------------------------------------------------------------------
+heuristic       5     1133      970    0.144        0        0        0        0    0.400    0.898    0.395    0.960    1.000    0.345    0.513
+heuristic      15     1471     1348    0.084        0       31       37        4    0.733    0.883    0.685    0.867    1.000    0.588    0.740
+heuristic      30     1536     1432    0.068        0       30       37        4    0.804    0.832    0.706    0.750    1.000    0.626    0.770
+heuristic      60     1052      960    0.087        0       31       45        5    0.859    0.728    0.663    0.492    1.000    0.654    0.791
+heuristic     120      474      397    0.162       12       26       34        4    0.725    0.500    0.461    0.136    0.778    0.663    0.716
+mapper          5      176       20    0.886        0        0        0        0    0.396    0.857    0.394    0.984    1.000    0.374    0.544
+mapper         15      145       46    0.683        0       37       48        9    0.721    0.888    0.705    0.973    1.000    0.656    0.792
+mapper         30      186       87    0.532        0       36       48        9    0.767    0.925    0.745    0.955    1.000    0.689    0.816
+mapper         60      211      121    0.427        0       40       55       11    0.834    0.918    0.798    0.928    1.000    0.739    0.850
+mapper        120      224      136    0.393        0       38       55       10    0.842    0.898    0.789    0.900    1.000    0.743    0.852
+labels          5      172        0    1.000        0        0        0        0    0.453    0.922    0.453    1.000    1.000    0.464    0.634
+labels         15       98        0    1.000        0       74       74       11    0.873    0.967    0.873    1.000    1.000    0.923    0.960
+labels         30      105        0    1.000        0       75       75       11    0.908    1.000    0.908    1.000    1.000    0.934    0.966
+labels         60       91        0    1.000        0       89       89       13    0.996    1.000    0.996    1.000    1.000    0.999    0.999
+labels        120       91        0    1.000        0       89       89       13    0.996    1.000    0.996    1.000    1.000    0.999    0.999
+
+column definitions: see the docstring of evaluation/incident_match.py
+
+LIMITATIONS - read before quoting any number above:
+1. Easy grouping. The generator keeps incidents at least 3 hours apart whenever
+   they share a user or a device, so two attacks never interleave on one host
+   or account. Grouping is therefore much easier here than on real data, and
+   these scores must not be read as real-world accuracy.
+2. 'labels' rows choose candidate events with the ground-truth labels. That is
+   leakage; they are an optimistic upper bound and never the headline figure.
+3. 'heuristic' is label-free but has a ceiling: file_access events and Office
+   application launches are never candidates, so T1005 and T1204.002 steps can
+   never be grouped and trajGT is capped accordingly. Its routine-application
+   list equals the generator's benign application list. Most of its candidates
+   are benign web and mail events, hence the many 'false' incidents.
+4. 'mapper' is label-free: candidates are the events the rule-based mapper
+   tagged, so it inherits every mapper false positive and miss.
+5. The default window (30 min) was picked from a sweep on the first (clean)
+   version of the dataset and is not validated on held-out data. Slow-paced
+   incidents, whose steps are 15-45 minutes apart, fragment at 30 minutes; a
+   60-minute window scores higher on this draw but was not adopted after the
+   fact.
+6. trajGT gives the paired incident's events their ground-truth techniques, so
+   it measures grouping only. trajMap uses the mapper's techniques end to end.
+7. Some coverage comes from benign events bridging gaps between attack steps.
+
+--- per true incident, method=heuristic, W=30 min ---
+  GT-001 G15 exact       fast -> INC-00109  cov 0.83  pur 0.38  jac 0.36  frag 1  unassigned  1  trajGT NO  trajMap NO
+  GT-002 G11 light       fast -> INC-00367  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-003 G17 heavy       fast -> INC-00768  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-004 G13 light       fast -> INC-00786  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-005 G08 exact       fast -> INC-00986  cov 0.86  pur 0.55  jac 0.50  frag 1  unassigned  1  trajGT NO  trajMap NO
+  GT-006 G10 light       fast -> INC-01178  cov 0.81  pur 0.93  jac 0.76  frag 1  unassigned  6  trajGT NO  trajMap NO
+  GT-007 G17 light       fast -> INC-01485  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-008 G04 heavy       fast -> INC-01966  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap ok
+  GT-009 G02 heavy       fast -> INC-01969  cov 0.67  pur 1.00  jac 0.67  frag 1  unassigned  5  trajGT NO  trajMap NO
+  GT-010 G03 heavy       fast -> INC-02036  cov 0.78  pur 1.00  jac 0.78  frag 1  unassigned  2  trajGT NO  trajMap NO
+  GT-011 G09 light       fast -> INC-02075  cov 0.85  pur 0.85  jac 0.74  frag 1  unassigned  5  trajGT NO  trajMap NO
+  GT-012 G08 heavy       slow -> INC-02205  cov 0.80  pur 0.36  jac 0.33  frag 1  unassigned  2  trajGT NO  trajMap NO
+  GT-013 G15 light       slow -> INC-02734  cov 0.56  pur 0.71  jac 0.45  frag 2  unassigned  2  trajGT NO  trajMap NO
+  GT-014 G13 heavy       slow -> INC-02980  cov 0.64  pur 0.64  jac 0.47  frag 2  unassigned  1  trajGT NO  trajMap NO
+  GT-015 G05 light       fast -> INC-03054  cov 0.80  pur 0.50  jac 0.44  frag 1  unassigned  1  trajGT NO  trajMap NO
+  GT-016 G16 exact       slow -> INC-03108  cov 0.67  pur 0.57  jac 0.44  frag 1  unassigned  2  trajGT NO  trajMap NO
+  GT-017 G17 exact       fast -> INC-03553  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-018 G14 exact       fast -> INC-03953  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-019 G16 heavy       fast -> INC-03965  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-020 G12 light       fast -> INC-03972  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-021 G06 heavy       fast -> INC-04044  cov 0.55  pur 1.00  jac 0.55  frag 1  unassigned  5  trajGT NO  trajMap NO
+  GT-022 G07 light       fast -> INC-04227  cov 0.43  pur 0.75  jac 0.38  frag 1  unassigned  8  trajGT NO  trajMap NO
+  GT-023 G01 heavy       fast -> INC-04409  cov 1.00  pur 0.67  jac 0.67  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-024 G15 heavy       fast -> INC-04472  cov 0.89  pur 0.57  jac 0.53  frag 1  unassigned  1  trajGT NO  trajMap NO
+  GT-025 G03 heavy       slow -> INC-04563  cov 0.62  pur 0.57  jac 0.42  frag 1  unassigned  5  trajGT NO  trajMap NO
+  GT-026 G16 light       fast -> INC-04782  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-027 G11 exact       fast -> INC-04807  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-028 G07 heavy       fast -> INC-05261  cov 0.31  pur 0.50  jac 0.24  frag 1  unassigned 11  trajGT NO  trajMap NO
+  GT-029 G11 light       fast -> INC-05542  cov 1.00  pur 0.94  jac 0.94  frag 1  unassigned  0  trajGT ok  trajMap ok
+  GT-030 G12 heavy       fast -> INC-05587  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-031 G05 exact       fast -> INC-05672  cov 0.86  pur 0.50  jac 0.46  frag 1  unassigned  1  trajGT NO  trajMap NO
+  GT-032 G13 exact       fast -> INC-05989  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-033 G11 heavy       fast -> INC-06082  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap ok
+  GT-034 G04 exact       fast -> INC-06097  cov 1.00  pur 0.83  jac 0.83  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-035 G08 light       fast -> INC-06107  cov 0.89  pur 0.57  jac 0.53  frag 1  unassigned  1  trajGT NO  trajMap NO
+  GT-036 G16 light       fast -> INC-06465  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-037 G08 heavy       fast -> INC-06618  cov 0.88  pur 0.54  jac 0.50  frag 1  unassigned  1  trajGT NO  trajMap NO
+  GT-038 G01 heavy       fast -> INC-06822  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-039 G02 heavy       fast -> INC-07118  cov 0.64  pur 0.50  jac 0.39  frag 1  unassigned  5  trajGT NO  trajMap NO
+  GT-040 G04 light       fast -> INC-07242  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-041 G17 heavy       slow -> INC-07810  cov 0.38  pur 0.60  jac 0.30  frag 5  unassigned  0  trajGT NO  trajMap NO
+  GT-042 G14 light       fast -> INC-07984  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-043 G01 light       fast -> INC-08008  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-044 G18 heavy       fast -> INC-08027  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-045 G17 light       fast -> INC-08061  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-046 G15 light       fast -> INC-08181  cov 0.88  pur 1.00  jac 0.88  frag 1  unassigned  1  trajGT NO  trajMap NO
+  GT-047 G03 exact       fast -> INC-08456  cov 0.71  pur 1.00  jac 0.71  frag 1  unassigned  4  trajGT NO  trajMap NO
+  GT-048 G14 heavy       slow -> INC-08472  cov 0.67  pur 0.57  jac 0.44  frag 2  unassigned  0  trajGT NO  trajMap NO
+  GT-049 G12 exact       fast -> INC-08828  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-050 G06 light       fast -> INC-09183  cov 0.62  pur 0.71  jac 0.50  frag 1  unassigned  3  trajGT NO  trajMap NO
+  GT-051 G10 exact       fast -> INC-09258  cov 0.58  pur 0.33  jac 0.27  frag 1  unassigned  8  trajGT NO  trajMap NO
+  GT-052 G02 light       fast -> INC-09531  cov 0.64  pur 1.00  jac 0.64  frag 1  unassigned  4  trajGT NO  trajMap NO
+  GT-053 G09 exact       fast -> INC-09558  cov 0.84  pur 1.00  jac 0.84  frag 1  unassigned  3  trajGT NO  trajMap NO
+  GT-054 G07 heavy       fast -> INC-09598  cov 0.46  pur 1.00  jac 0.46  frag 1  unassigned  7  trajGT NO  trajMap NO
+  GT-055 G09 light       slow -> INC-09943  cov 0.75  pur 1.00  jac 0.75  frag 2  unassigned  4  trajGT NO  trajMap NO
+  GT-056 G09 heavy       fast -> INC-09992  cov 0.88  pur 1.00  jac 0.88  frag 1  unassigned  4  trajGT NO  trajMap NO
+  GT-057 G01 light       fast -> INC-10351  cov 1.00  pur 0.86  jac 0.86  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-058 G12 heavy       fast -> INC-10442  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-059 G07 light       fast -> INC-10541  cov 0.45  pur 0.45  jac 0.29  frag 1  unassigned  6  trajGT NO  trajMap NO
+  GT-060 G03 light       fast -> INC-11195  cov 0.67  pur 1.00  jac 0.67  frag 1  unassigned  5  trajGT NO  trajMap NO
+  GT-061 G18 light       fast -> INC-11221  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-062 G06 exact       fast -> INC-11391  cov 0.54  pur 0.78  jac 0.47  frag 1  unassigned  6  trajGT NO  trajMap NO
+  GT-063 G03 light       slow -> INC-11614  cov 0.33  pur 1.00  jac 0.33  frag 2  unassigned  2  trajGT NO  trajMap NO
+  GT-064 G10 heavy       fast -> INC-11882  cov 0.72  pur 0.78  jac 0.60  frag 1  unassigned  7  trajGT NO  trajMap NO
+  GT-065 G14 light       slow -> INC-12055  cov 0.40  pur 1.00  jac 0.40  frag 1  unassigned  3  trajGT NO  trajMap NO
+  GT-066 G05 heavy       fast -> INC-12132  cov 0.75  pur 0.50  jac 0.43  frag 1  unassigned  1  trajGT NO  trajMap NO
+  GT-067 G15 heavy       slow -> INC-12275  cov 0.80  pur 0.44  jac 0.40  frag 1  unassigned  1  trajGT NO  trajMap NO
+  GT-068 G12 light       fast -> INC-12865  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-069 G07 exact       fast -> INC-13354  cov 0.35  pur 0.55  jac 0.27  frag 1  unassigned 11  trajGT NO  trajMap NO
+  GT-070 G18 exact       fast -> INC-13545  cov 1.00  pur 0.70  jac 0.70  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-071 G18 light       slow -> INC-14035  cov 0.44  pur 1.00  jac 0.44  frag 2  unassigned  3  trajGT NO  trajMap NO
+  GT-072 G11 heavy       fast -> INC-14058  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-073 G10 light       fast -> INC-14116  cov 0.56  pur 1.00  jac 0.56  frag 1  unassigned 11  trajGT NO  trajMap NO
+  GT-074 G16 heavy       fast -> INC-14142  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-075 G09 heavy       fast -> INC-14531  cov 0.78  pur 0.75  jac 0.62  frag 1  unassigned  5  trajGT NO  trajMap NO
+  GT-076 G06 heavy       slow -> INC-14808  cov 0.44  pur 0.44  jac 0.29  frag 1  unassigned  5  trajGT NO  trajMap NO
+  GT-077 G10 heavy       fast -> INC-14913  cov 0.68  pur 1.00  jac 0.68  frag 1  unassigned 11  trajGT NO  trajMap NO
+  GT-078 G02 exact       fast -> INC-15183  cov 0.77  pur 0.91  jac 0.71  frag 1  unassigned  3  trajGT NO  trajMap NO
+  GT-079 G13 light       fast -> INC-15336  cov 1.00  pur 0.90  jac 0.90  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-080 G06 light       fast -> INC-15569  cov 0.89  pur 1.00  jac 0.89  frag 1  unassigned  1  trajGT NO  trajMap NO
+  GT-081 G13 heavy       fast -> INC-15700  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap ok
+  GT-082 G04 heavy       fast -> INC-15802  cov 1.00  pur 0.91  jac 0.91  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-083 G05 light       fast -> INC-15887  cov 0.80  pur 0.57  jac 0.50  frag 1  unassigned  1  trajGT NO  trajMap NO
+  GT-084 G02 light       fast -> INC-16137  cov 0.80  pur 1.00  jac 0.80  frag 1  unassigned  2  trajGT NO  trajMap NO
+  GT-085 G01 exact       fast -> INC-16182  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-086 G04 light       fast -> INC-16205  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-087 G05 heavy       fast -> INC-16288  cov 0.67  pur 0.50  jac 0.40  frag 1  unassigned  1  trajGT NO  trajMap NO
+  GT-088 G08 light       slow -> INC-17125  cov 0.62  pur 0.56  jac 0.42  frag 3  unassigned  1  trajGT NO  trajMap NO
+  GT-089 G14 heavy       slow -> INC-17292  cov 0.75  pur 0.60  jac 0.50  frag 1  unassigned  1  trajGT NO  trajMap NO
+  GT-090 G18 heavy       slow -> INC-17306  cov 0.44  pur 1.00  jac 0.44  frag 3  unassigned  0  trajGT NO  trajMap NO
+
+--- per true incident, method=mapper, W=30 min ---
+  GT-001 G15 exact       fast -> INC-00136  cov 0.67  pur 0.80  jac 0.57  frag 1  unassigned  2  trajGT NO  trajMap NO
+  GT-002 G11 light       fast -> INC-00367  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-003 G17 heavy       fast -> None       cov 0.00  pur 0.00  jac 0.00  frag 0  unassigned  3  trajGT NO  trajMap NO
+  GT-004 G13 light       fast -> INC-00786  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-005 G08 exact       fast -> INC-01029  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap ok
+  GT-006 G10 light       fast -> INC-01178  cov 0.78  pur 1.00  jac 0.78  frag 1  unassigned  7  trajGT NO  trajMap NO
+  GT-007 G17 light       fast -> INC-01485  cov 0.50  pur 1.00  jac 0.50  frag 1  unassigned  2  trajGT NO  trajMap NO
+  GT-008 G04 heavy       fast -> INC-01966  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap ok
+  GT-009 G02 heavy       fast -> INC-01969  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap ok
+  GT-010 G03 heavy       fast -> INC-02036  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-011 G09 light       fast -> INC-02084  cov 0.91  pur 1.00  jac 0.91  frag 1  unassigned  3  trajGT NO  trajMap NO
+  GT-012 G08 heavy       slow -> INC-02230  cov 0.60  pur 1.00  jac 0.60  frag 1  unassigned  4  trajGT NO  trajMap NO
+  GT-013 G15 light       slow -> INC-02734  cov 0.56  pur 0.83  jac 0.50  frag 2  unassigned  2  trajGT NO  trajMap NO
+  GT-014 G13 heavy       slow -> INC-02980  cov 0.45  pur 0.71  jac 0.38  frag 2  unassigned  3  trajGT NO  trajMap NO
+  GT-015 G05 light       fast -> INC-03054  cov 1.00  pur 0.83  jac 0.83  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-016 G16 exact       slow -> INC-03161  cov 0.33  pur 1.00  jac 0.33  frag 2  unassigned  2  trajGT NO  trajMap NO
+  GT-017 G17 exact       fast -> INC-03553  cov 0.50  pur 1.00  jac 0.50  frag 1  unassigned  3  trajGT NO  trajMap NO
+  GT-018 G14 exact       fast -> INC-03953  cov 0.80  pur 1.00  jac 0.80  frag 1  unassigned  1  trajGT NO  trajMap NO
+  GT-019 G16 heavy       fast -> INC-03965  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-020 G12 light       fast -> INC-03972  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-021 G06 heavy       fast -> INC-04044  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-022 G07 light       fast -> INC-04227  cov 0.43  pur 1.00  jac 0.43  frag 1  unassigned  8  trajGT NO  trajMap NO
+  GT-023 G01 heavy       fast -> INC-04409  cov 1.00  pur 0.86  jac 0.86  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-024 G15 heavy       fast -> INC-04484  cov 0.67  pur 0.86  jac 0.60  frag 1  unassigned  3  trajGT NO  trajMap NO
+  GT-025 G03 heavy       slow -> INC-04617  cov 0.62  pur 0.73  jac 0.50  frag 2  unassigned  0  trajGT NO  trajMap NO
+  GT-026 G16 light       fast -> INC-04782  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-027 G11 exact       fast -> INC-04807  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-028 G07 heavy       fast -> INC-05261  cov 0.38  pur 0.86  jac 0.35  frag 1  unassigned 10  trajGT NO  trajMap NO
+  GT-029 G11 light       fast -> INC-05542  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap ok
+  GT-030 G12 heavy       fast -> INC-05587  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-031 G05 exact       fast -> INC-05696  cov 1.00  pur 0.88  jac 0.88  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-032 G13 exact       fast -> INC-05989  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-033 G11 heavy       fast -> INC-06082  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap ok
+  GT-034 G04 exact       fast -> INC-06097  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-035 G08 light       fast -> INC-06126  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap ok
+  GT-036 G16 light       fast -> INC-06465  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-037 G08 heavy       fast -> INC-06648  cov 0.88  pur 0.78  jac 0.70  frag 1  unassigned  1  trajGT NO  trajMap NO
+  GT-038 G01 heavy       fast -> INC-06822  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-039 G02 heavy       fast -> INC-07135  cov 1.00  pur 0.93  jac 0.93  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-040 G04 light       fast -> INC-07242  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-041 G17 heavy       slow -> INC-07905  cov 0.25  pur 1.00  jac 0.25  frag 1  unassigned  6  trajGT NO  trajMap NO
+  GT-042 G14 light       fast -> INC-07984  cov 0.83  pur 1.00  jac 0.83  frag 1  unassigned  1  trajGT NO  trajMap NO
+  GT-043 G01 light       fast -> INC-08008  cov 0.75  pur 1.00  jac 0.75  frag 1  unassigned  1  trajGT NO  trajMap NO
+  GT-044 G18 heavy       fast -> INC-08027  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-045 G17 light       fast -> INC-08061  cov 0.50  pur 1.00  jac 0.50  frag 1  unassigned  3  trajGT NO  trajMap NO
+  GT-046 G15 light       fast -> None       cov 0.00  pur 0.00  jac 0.00  frag 0  unassigned  8  trajGT NO  trajMap NO
+  GT-047 G03 exact       fast -> INC-08456  cov 0.93  pur 1.00  jac 0.93  frag 1  unassigned  1  trajGT ok  trajMap ok
+  GT-048 G14 heavy       slow -> INC-08472  cov 0.33  pur 1.00  jac 0.33  frag 1  unassigned  4  trajGT NO  trajMap NO
+  GT-049 G12 exact       fast -> INC-08828  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-050 G06 light       fast -> INC-09203  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-051 G10 exact       fast -> INC-09303  cov 0.53  pur 0.77  jac 0.45  frag 1  unassigned  9  trajGT NO  trajMap NO
+  GT-052 G02 light       fast -> INC-09531  cov 0.91  pur 1.00  jac 0.91  frag 1  unassigned  1  trajGT ok  trajMap NO
+  GT-053 G09 exact       fast -> INC-09558  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-054 G07 heavy       fast -> INC-09598  cov 0.54  pur 1.00  jac 0.54  frag 1  unassigned  6  trajGT NO  trajMap NO
+  GT-055 G09 light       slow -> INC-09943  cov 0.75  pur 1.00  jac 0.75  frag 3  unassigned  1  trajGT NO  trajMap NO
+  GT-056 G09 heavy       fast -> INC-09992  cov 0.97  pur 1.00  jac 0.97  frag 1  unassigned  1  trajGT ok  trajMap ok
+  GT-057 G01 light       fast -> INC-10348  cov 1.00  pur 0.86  jac 0.86  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-058 G12 heavy       fast -> INC-10442  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-059 G07 light       fast -> INC-10542  cov 0.45  pur 1.00  jac 0.45  frag 1  unassigned  6  trajGT NO  trajMap NO
+  GT-060 G03 light       fast -> INC-11195  cov 0.60  pur 1.00  jac 0.60  frag 1  unassigned  6  trajGT NO  trajMap NO
+  GT-061 G18 light       fast -> INC-11221  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-062 G06 exact       fast -> INC-11401  cov 1.00  pur 0.93  jac 0.93  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-063 G03 light       slow -> INC-11614  cov 0.33  pur 1.00  jac 0.33  frag 2  unassigned  2  trajGT NO  trajMap NO
+  GT-064 G10 heavy       fast -> INC-11882  cov 0.68  pur 0.89  jac 0.63  frag 1  unassigned  8  trajGT NO  trajMap NO
+  GT-065 G14 light       slow -> None       cov 0.00  pur 0.00  jac 0.00  frag 0  unassigned  5  trajGT NO  trajMap NO
+  GT-066 G05 heavy       fast -> INC-12153  cov 0.50  pur 1.00  jac 0.50  frag 1  unassigned  2  trajGT NO  trajMap NO
+  GT-067 G15 heavy       slow -> INC-12301  cov 0.60  pur 1.00  jac 0.60  frag 1  unassigned  2  trajGT NO  trajMap NO
+  GT-068 G12 light       fast -> INC-12865  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-069 G07 exact       fast -> INC-13381  cov 0.12  pur 1.00  jac 0.12  frag 1  unassigned 15  trajGT NO  trajMap NO
+  GT-070 G18 exact       fast -> INC-13558  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-071 G18 light       slow -> INC-14035  cov 0.44  pur 1.00  jac 0.44  frag 2  unassigned  3  trajGT NO  trajMap NO
+  GT-072 G11 heavy       fast -> INC-14058  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-073 G10 light       fast -> INC-14116  cov 0.52  pur 1.00  jac 0.52  frag 1  unassigned 12  trajGT NO  trajMap NO
+  GT-074 G16 heavy       fast -> INC-14142  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-075 G09 heavy       fast -> INC-14531  cov 1.00  pur 0.96  jac 0.96  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-076 G06 heavy       slow -> INC-14808  cov 0.33  pur 1.00  jac 0.33  frag 3  unassigned  3  trajGT NO  trajMap NO
+  GT-077 G10 heavy       fast -> INC-14913  cov 0.68  pur 1.00  jac 0.68  frag 1  unassigned 11  trajGT NO  trajMap NO
+  GT-078 G02 exact       fast -> INC-15183  cov 0.92  pur 1.00  jac 0.92  frag 1  unassigned  1  trajGT ok  trajMap NO
+  GT-079 G13 light       fast -> INC-15336  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-080 G06 light       fast -> INC-15569  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-081 G13 heavy       fast -> INC-15700  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap ok
+  GT-082 G04 heavy       fast -> INC-15802  cov 0.90  pur 1.00  jac 0.90  frag 1  unassigned  1  trajGT ok  trajMap NO
+  GT-083 G05 light       fast -> INC-15867  cov 0.80  pur 0.57  jac 0.50  frag 1  unassigned  1  trajGT NO  trajMap NO
+  GT-084 G02 light       fast -> INC-16137  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-085 G01 exact       fast -> INC-16182  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-086 G04 light       fast -> INC-16205  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-087 G05 heavy       fast -> INC-16288  cov 0.33  pur 0.50  jac 0.25  frag 1  unassigned  2  trajGT NO  trajMap NO
+  GT-088 G08 light       slow -> INC-17125  cov 0.50  pur 0.67  jac 0.40  frag 1  unassigned  4  trajGT NO  trajMap NO
+  GT-089 G14 heavy       slow -> INC-17300  cov 0.50  pur 1.00  jac 0.50  frag 1  unassigned  2  trajGT NO  trajMap NO
+  GT-090 G18 heavy       slow -> INC-17306  cov 0.44  pur 1.00  jac 0.44  frag 3  unassigned  0  trajGT NO  trajMap NO
+
+--- per true incident, method=labels, W=30 min ---
+  GT-001 G15 exact       fast -> INC-00127  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-002 G11 light       fast -> INC-00367  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-003 G17 heavy       fast -> INC-00768  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-004 G13 light       fast -> INC-00786  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-005 G08 exact       fast -> INC-01029  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap ok
+  GT-006 G10 light       fast -> INC-01178  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-007 G17 light       fast -> INC-01485  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-008 G04 heavy       fast -> INC-01966  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap ok
+  GT-009 G02 heavy       fast -> INC-01969  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap ok
+  GT-010 G03 heavy       fast -> INC-02036  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-011 G09 light       fast -> INC-02084  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-012 G08 heavy       slow -> INC-02230  cov 0.60  pur 1.00  jac 0.60  frag 1  unassigned  4  trajGT NO  trajMap NO
+  GT-013 G15 light       slow -> INC-02734  cov 0.56  pur 1.00  jac 0.56  frag 2  unassigned  2  trajGT NO  trajMap NO
+  GT-014 G13 heavy       slow -> INC-02980  cov 0.64  pur 1.00  jac 0.64  frag 2  unassigned  1  trajGT NO  trajMap NO
+  GT-015 G05 light       fast -> INC-03054  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap ok
+  GT-016 G16 exact       slow -> INC-03108  cov 0.33  pur 1.00  jac 0.33  frag 2  unassigned  2  trajGT NO  trajMap NO
+  GT-017 G17 exact       fast -> INC-03553  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-018 G14 exact       fast -> INC-03953  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-019 G16 heavy       fast -> INC-03965  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-020 G12 light       fast -> INC-03972  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-021 G06 heavy       fast -> INC-04044  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-022 G07 light       fast -> INC-04227  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-023 G01 heavy       fast -> INC-04409  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-024 G15 heavy       fast -> INC-04472  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-025 G03 heavy       slow -> INC-04658  cov 0.46  pur 1.00  jac 0.46  frag 3  unassigned  0  trajGT NO  trajMap NO
+  GT-026 G16 light       fast -> INC-04782  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-027 G11 exact       fast -> INC-04807  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-028 G07 heavy       fast -> INC-05261  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-029 G11 light       fast -> INC-05542  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap ok
+  GT-030 G12 heavy       fast -> INC-05587  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-031 G05 exact       fast -> INC-05696  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-032 G13 exact       fast -> INC-05989  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-033 G11 heavy       fast -> INC-06082  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap ok
+  GT-034 G04 exact       fast -> INC-06097  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-035 G08 light       fast -> INC-06126  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap ok
+  GT-036 G16 light       fast -> INC-06465  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-037 G08 heavy       fast -> INC-06648  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-038 G01 heavy       fast -> INC-06822  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-039 G02 heavy       fast -> INC-07135  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap ok
+  GT-040 G04 light       fast -> INC-07242  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-041 G17 heavy       slow -> INC-07810  cov 0.25  pur 1.00  jac 0.25  frag 2  unassigned  4  trajGT NO  trajMap NO
+  GT-042 G14 light       fast -> INC-07984  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-043 G01 light       fast -> INC-08008  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-044 G18 heavy       fast -> INC-08027  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-045 G17 light       fast -> INC-08061  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-046 G15 light       fast -> INC-08181  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-047 G03 exact       fast -> INC-08456  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap ok
+  GT-048 G14 heavy       slow -> INC-08472  cov 0.33  pur 1.00  jac 0.33  frag 2  unassigned  2  trajGT NO  trajMap NO
+  GT-049 G12 exact       fast -> INC-08828  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-050 G06 light       fast -> INC-09203  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-051 G10 exact       fast -> INC-09324  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-052 G02 light       fast -> INC-09531  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-053 G09 exact       fast -> INC-09558  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-054 G07 heavy       fast -> INC-09598  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-055 G09 light       slow -> INC-09943  cov 0.75  pur 1.00  jac 0.75  frag 3  unassigned  1  trajGT NO  trajMap NO
+  GT-056 G09 heavy       fast -> INC-09992  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap ok
+  GT-057 G01 light       fast -> INC-10351  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-058 G12 heavy       fast -> INC-10442  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-059 G07 light       fast -> INC-10542  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-060 G03 light       fast -> INC-11195  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-061 G18 light       fast -> INC-11221  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-062 G06 exact       fast -> INC-11401  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-063 G03 light       slow -> INC-11614  cov 0.33  pur 1.00  jac 0.33  frag 2  unassigned  2  trajGT NO  trajMap NO
+  GT-064 G10 heavy       fast -> INC-11899  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-065 G14 light       slow -> INC-12055  cov 0.40  pur 1.00  jac 0.40  frag 1  unassigned  3  trajGT NO  trajMap NO
+  GT-066 G05 heavy       fast -> INC-12141  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-067 G15 heavy       slow -> INC-12275  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-068 G12 light       fast -> INC-12865  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-069 G07 exact       fast -> INC-13381  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-070 G18 exact       fast -> INC-13558  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-071 G18 light       slow -> INC-14035  cov 0.44  pur 1.00  jac 0.44  frag 2  unassigned  3  trajGT NO  trajMap NO
+  GT-072 G11 heavy       fast -> INC-14058  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-073 G10 light       fast -> INC-14116  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-074 G16 heavy       fast -> INC-14142  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-075 G09 heavy       fast -> INC-14531  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-076 G06 heavy       slow -> INC-14742  cov 0.33  pur 1.00  jac 0.33  frag 3  unassigned  1  trajGT NO  trajMap NO
+  GT-077 G10 heavy       fast -> INC-14913  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-078 G02 exact       fast -> INC-15183  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-079 G13 light       fast -> INC-15336  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-080 G06 light       fast -> INC-15569  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-081 G13 heavy       fast -> INC-15700  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap ok
+  GT-082 G04 heavy       fast -> INC-15802  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-083 G05 light       fast -> INC-15896  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-084 G02 light       fast -> INC-16137  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-085 G01 exact       fast -> INC-16182  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-086 G04 light       fast -> INC-16205  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-087 G05 heavy       fast -> INC-16301  cov 1.00  pur 1.00  jac 1.00  frag 1  unassigned  0  trajGT ok  trajMap NO
+  GT-088 G08 light       slow -> INC-17159  cov 0.38  pur 1.00  jac 0.38  frag 1  unassigned  5  trajGT NO  trajMap NO
+  GT-089 G14 heavy       slow -> INC-17300  cov 0.50  pur 1.00  jac 0.50  frag 1  unassigned  2  trajGT NO  trajMap NO
+  GT-090 G18 heavy       slow -> INC-17306  cov 0.44  pur 1.00  jac 0.44  frag 3  unassigned  0  trajGT NO  trajMap NO
+
+=== sample trajectory (contract 3), method=mapper, techniques from mapper ===
+{
+  "incident_id": "INC-00136",
+  "techniques": [
+    {
+      "id": "T1053.005",
+      "timestamp": "2026-09-07T11:16:30Z"
+    },
+    {
+      "id": "T1057",
+      "timestamp": "2026-09-07T11:23:51Z"
+    },
+    {
+      "id": "T1021.002",
+      "timestamp": "2026-09-07T11:25:03Z"
+    },
+    {
+      "id": "T1016",
+      "timestamp": "2026-09-07T11:33:24Z"
+    },
+    {
+      "id": "T1041",
+      "timestamp": "2026-09-07T11:35:51Z"
+    }
+  ]
+}

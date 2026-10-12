@@ -1,0 +1,19 @@
+trajectories,history,graph,top1,top1_tie,top3,mrr,precision,recall,f1,correct,instances,incidents
+ground-truth trajectories,other templates,static,0.271,0.288,0.431,0.385,0.096,0.133,0.105,108,399,90
+ground-truth trajectories,other templates,temporal,0.323,0.309,0.353,0.349,0.181,0.186,0.180,129,399,90
+ground-truth trajectories,other templates,"temporal, ranking padded with shorter-context candidates",0.331,0.310,0.406,0.417,0.183,0.192,0.184,132,399,90
+ground-truth trajectories,all templates (own included),static,0.396,0.394,0.581,0.538,0.199,0.224,0.185,158,399,90
+ground-truth trajectories,all templates (own included),temporal,0.416,0.419,0.589,0.504,0.307,0.301,0.293,166,399,90
+ground-truth trajectories,all templates (own included),"temporal, ranking padded with shorter-context candidates",0.416,0.419,0.627,0.551,0.305,0.301,0.292,166,399,90
+ground-truth trajectories,real plans,static,0.028,0.032,0.058,0.103,0.001,0.038,0.002,11,399,90
+ground-truth trajectories,real plans,temporal,0.073,0.073,0.150,0.114,0.021,0.053,0.025,29,399,90
+ground-truth trajectories,real plans,"temporal, ranking padded with shorter-context candidates",0.073,0.073,0.150,0.165,0.021,0.053,0.025,29,399,90
+pipeline trajectories,other templates,static,0.282,0.292,0.459,0.397,0.097,0.131,0.108,94,333,82
+pipeline trajectories,other templates,temporal,0.300,0.296,0.351,0.333,0.160,0.155,0.155,100,333,82
+pipeline trajectories,other templates,"temporal, ranking padded with shorter-context candidates",0.306,0.297,0.432,0.412,0.161,0.162,0.158,102,333,82
+pipeline trajectories,all templates (own included),static,0.366,0.362,0.538,0.481,0.188,0.221,0.170,122,333,82
+pipeline trajectories,all templates (own included),temporal,0.324,0.338,0.447,0.391,0.217,0.213,0.199,108,333,82
+pipeline trajectories,all templates (own included),"temporal, ranking padded with shorter-context candidates",0.324,0.339,0.514,0.458,0.216,0.213,0.198,108,333,82
+pipeline trajectories,real plans,static,0.006,0.012,0.036,0.075,0.000,0.043,0.001,2,333,82
+pipeline trajectories,real plans,temporal,0.087,0.083,0.141,0.114,0.039,0.059,0.040,29,333,82
+pipeline trajectories,real plans,"temporal, ranking padded with shorter-context candidates",0.087,0.083,0.144,0.169,0.039,0.059,0.040,29,333,82

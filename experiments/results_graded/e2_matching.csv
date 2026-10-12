@@ -1,0 +1,17 @@
+trajectories,incidents scored,graph,own template is the unique top match,own template is top or tied for top,incidents,accuracy (unique)
+ground-truth trajectories,all incidents,static,69,90,90,0.767
+ground-truth trajectories,all incidents,temporal,81,88,90,0.900
+ground-truth trajectories,all except the reordered templates,static,69,70,70,0.986
+ground-truth trajectories,all except the reordered templates,temporal,69,70,70,0.986
+ground-truth trajectories,perturbed instances only,static,55,72,72,0.764
+ground-truth trajectories,perturbed instances only,temporal,63,70,72,0.875
+ground-truth trajectories,templates that reorder another template,static,0,20,20,0.000
+ground-truth trajectories,templates that reorder another template,temporal,12,18,20,0.600
+pipeline trajectories,all incidents,static,41,71,90,0.456
+pipeline trajectories,all incidents,temporal,52,65,90,0.578
+pipeline trajectories,all except the reordered templates,static,41,52,70,0.586
+pipeline trajectories,all except the reordered templates,temporal,41,49,70,0.586
+pipeline trajectories,perturbed instances only,static,29,54,72,0.403
+pipeline trajectories,perturbed instances only,temporal,36,48,72,0.500
+pipeline trajectories,templates that reorder another template,static,0,19,20,0.000
+pipeline trajectories,templates that reorder another template,temporal,11,16,20,0.550

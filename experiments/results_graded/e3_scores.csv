@@ -1,0 +1,27 @@
+trajectories,similarity,class,min,mean,max,incidents
+ground-truth trajectories,temporal,known,0.800,0.822,0.875,24
+ground-truth trajectories,temporal,variant,0.600,0.706,0.812,24
+ground-truth trajectories,temporal,novel,0.056,0.406,0.833,30
+ground-truth trajectories,temporal,exact instance (not classified),1.000,1.000,1.000,12
+ground-truth trajectories,temporal,"novel, near (G02 G08 G13)",0.472,0.660,0.833,15
+ground-truth trajectories,temporal,"novel, far (G16 G17 G18)",0.056,0.152,0.267,15
+ground-truth trajectories,static,known,0.800,0.883,1.000,24
+ground-truth trajectories,static,variant,0.600,0.802,1.000,24
+ground-truth trajectories,static,novel,0.091,0.410,1.000,30
+ground-truth trajectories,static,exact instance (not classified),1.000,1.000,1.000,12
+ground-truth trajectories,static,"novel, near (G02 G08 G13)",0.444,0.692,1.000,15
+ground-truth trajectories,static,"novel, far (G16 G17 G18)",0.091,0.127,0.200,15
+pipeline trajectories,temporal,known,0.000,0.541,1.000,24
+pipeline trajectories,temporal,variant,0.183,0.489,0.750,24
+pipeline trajectories,temporal,novel,0.000,0.422,0.750,30
+pipeline trajectories,temporal,exact instance (not classified),0.400,0.679,1.000,12
+pipeline trajectories,temporal,"novel, near (G02 G08 G13)",0.343,0.579,0.750,15
+pipeline trajectories,temporal,"novel, far (G16 G17 G18)",0.000,0.264,0.464,15
+pipeline trajectories,temporal,attack-free inferred incident,0.183,0.333,0.700,87
+pipeline trajectories,static,known,0.000,0.559,1.000,24
+pipeline trajectories,static,variant,0.167,0.553,0.857,24
+pipeline trajectories,static,novel,0.000,0.432,1.000,30
+pipeline trajectories,static,exact instance (not classified),0.400,0.670,1.000,12
+pipeline trajectories,static,"novel, near (G02 G08 G13)",0.286,0.606,1.000,15
+pipeline trajectories,static,"novel, far (G16 G17 G18)",0.000,0.258,0.429,15
+pipeline trajectories,static,attack-free inferred incident,0.167,0.349,0.800,87

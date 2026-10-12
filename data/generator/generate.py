@@ -26,10 +26,17 @@ Two profiles:
       Benign staff never do anything attack-like and attackers reuse a pool of
       eight addresses, which made detection unrealistically easy.
 
+  graded - the experiment-redesign dataset (M10): noisy benign activity over
+      60 days and 90 incidents from 18 attack templates with GRADED similarity
+      (shared prefixes, shared suffixes, shared middles, the same techniques in
+      a different order, and unrelated ones). Each template has five instances:
+      one exact, two with one edit, two with two edits. Written to
+      ../processed/graded/ by default, next to the other dataset, not over it.
+
 Deterministic: the same --seed and --profile always produce byte-identical files.
 
 Usage:
-  python generate.py [--seed 42] [--profile noisy|clean] [--out-dir ../processed]
+  python generate.py [--seed 42] [--profile noisy|clean|graded] [--out-dir ../processed]
 """
 
 import argparse
@@ -120,7 +127,59 @@ TECHNIQUES = {
     "T1021.002": ("SMB/Windows Admin Shares", "Lateral Movement"),
     "T1005": ("Data from Local System", "Collection"),
     "T1041": ("Exfiltration Over C2 Channel", "Exfiltration"),
+    # used by the graded profile only
+    "T1133": ("External Remote Services", "Initial Access"),
+    "T1059.003": ("Windows Command Shell", "Execution"),
+    "T1569.002": ("Service Execution", "Execution"),
+    "T1033": ("System Owner/User Discovery", "Discovery"),
+    "T1057": ("Process Discovery", "Discovery"),
+    "T1016": ("System Network Configuration Discovery", "Discovery"),
+    "T1018": ("Remote System Discovery", "Discovery"),
+    "T1087": ("Account Discovery", "Discovery"),
+    "T1136.001": ("Local Account", "Persistence"),
+    "T1547.001": ("Registry Run Keys / Startup Folder", "Persistence"),
+    "T1105": ("Ingress Tool Transfer", "Command and Control"),
+    "T1560.001": ("Archive via Utility", "Collection"),
+    "T1070.004": ("File Deletion", "Stealth"),
+    "T1048": ("Exfiltration Over Alternative Protocol", "Exfiltration"),
+    "T1490": ("Inhibit System Recovery", "Impact"),
+    "T1486": ("Data Encrypted for Impact", "Impact"),
 }
+
+# ----------------------------------------------------------------------------
+# Graded profile: 18 templates with graded similarity (M10)
+# ----------------------------------------------------------------------------
+# family: how the template relates to the others
+#   credential / phishing / brute - share a 2-3 step prefix inside the family; several share a suffix
+#                                   with a template of another family
+#   reorder   - exactly the techniques of another template in a different order
+#   mid       - share a 2-step middle with each other (G15 also has the phishing entry steps)
+#   unrelated - share an entry step with each other (G16 and G18 also an exit step) and almost
+#               nothing with the other families
+GRADED_TEMPLATES = {
+    "G01": ("credential", ["T1078", "T1059.001", "T1082", "T1068", "T1021.001"]),
+    "G02": ("credential", ["T1078", "T1059.001", "T1082", "T1068", "T1021.001", "T1005", "T1041"]),
+    "G03": ("credential", ["T1078", "T1059.001", "T1082", "T1003.001", "T1021.002", "T1005", "T1041"]),
+    "G04": ("credential", ["T1078", "T1059.001", "T1082", "T1083", "T1560.001", "T1041"]),
+    "G05": ("phishing", ["T1566.001", "T1204.002", "T1059.001", "T1003.001", "T1021.002"]),
+    "G06": ("phishing", ["T1566.001", "T1204.002", "T1059.001", "T1547.001", "T1082", "T1005", "T1041"]),
+    "G07": ("phishing", ["T1566.001", "T1204.002", "T1059.001", "T1105", "T1490", "T1486"]),
+    "G08": ("phishing", ["T1566.001", "T1204.002", "T1059.001", "T1057", "T1068", "T1021.001"]),
+    "G09": ("brute", ["T1110", "T1078", "T1083", "T1005", "T1041"]),
+    "G10": ("brute", ["T1110", "T1078", "T1021.001", "T1490", "T1486"]),
+    "G11": ("brute", ["T1110", "T1078", "T1059.003", "T1087", "T1136.001"]),
+    "G12": ("reorder", ["T1078", "T1082", "T1059.001", "T1021.001", "T1068"]),            # the set of G01
+    "G13": ("reorder", ["T1078", "T1082", "T1083", "T1059.001", "T1560.001", "T1041"]),   # the set of G04
+    "G14": ("mid", ["T1078", "T1053.005", "T1057", "T1003.001", "T1070.004"]),
+    "G15": ("mid", ["T1566.001", "T1204.002", "T1053.005", "T1057", "T1016", "T1041"]),
+    "G16": ("unrelated", ["T1133", "T1059.003", "T1016", "T1033", "T1048"]),
+    "G17": ("unrelated", ["T1133", "T1569.002", "T1547.001", "T1070.004", "T1685.005"]),
+    "G18": ("unrelated", ["T1133", "T1087", "T1018", "T1560.001", "T1048"]),
+}
+GRADED_DAYS = 60
+GRADED_INSTANCES = ["exact", "light", "light", "heavy", "heavy"]   # edits: 0, 1, 1, 2, 2
+GRADED_FOOTHOLDS = {"T1078", "T1204.002", "T1133"}
+GRADED_INSERTABLE = ["T1082", "T1083", "T1057", "T1016", "T1033", "T1053.005", "T1070.004"]
 
 PATTERNS = {
     "A": ["T1078", "T1059.001", "T1068", "T1021.001"],
@@ -316,9 +375,9 @@ def server_day(rng, day):
     return out
 
 
-def benign_events(rng, noisy=False):
+def benign_events(rng, noisy=False, days=NUM_DAYS):
     out = []
-    for d in range(NUM_DAYS):
+    for d in range(days):
         day = START_DAY + timedelta(days=d)
         out += backup_night(rng, day)
         if noisy:
@@ -352,6 +411,24 @@ def apply_variant(rng, pattern, variant):
         seq.insert(i, tech)
         inserted = tech
     return seq, skipped, inserted
+
+
+# technique -> (program names, fewest runs, most runs) for steps that are one tool being run
+GRADED_TOOLS = {
+    "T1059.003": (["cmd.exe"], 1, 3),
+    "T1569.002": (["psexec.exe"], 1, 1),
+    "T1033": (["whoami.exe"], 1, 1),
+    "T1057": (["tasklist.exe"], 1, 1),
+    "T1016": (["ipconfig.exe"], 1, 2),
+    "T1018": (["ping.exe"], 1, 3),
+    "T1087": (["net.exe"], 1, 2),
+    "T1136.001": (["net.exe"], 1, 1),
+    "T1547.001": (["reg.exe"], 1, 1),
+    "T1105": (["certutil.exe"], 1, 1),
+    "T1560.001": (["7z.exe"], 1, 1),
+    "T1070.004": (["sdelete.exe"], 1, 2),
+    "T1490": (["vssadmin.exe"], 1, 1),
+}
 
 
 def step_events(rng, tech, ctx, t):
@@ -411,6 +488,19 @@ def step_events(rng, tech, ctx, t):
         for _ in range(rng.randint(1, 3)):
             out.append(ev(t, "firewall", user, ip, dst, host, "network_connection", None))
             t += timedelta(seconds=rng.randint(20, 120))
+    elif tech == "T1133":
+        out.append(ev(t, "windows", user, ctx["ext_ip"], ip, host, "logon_success", None))
+    elif tech in GRADED_TOOLS:
+        names, lo, hi = GRADED_TOOLS[tech]
+        proc_run(names, lo, hi)
+    elif tech == "T1486":
+        for _ in range(rng.randint(5, 12)):
+            out.append(ev(t, "windows", user, ip, None, host, "file_access", "locker.exe"))
+            t += timedelta(seconds=rng.randint(1, 10))
+    elif tech == "T1048":
+        for _ in range(rng.randint(1, 2)):
+            out.append(ev(t, "firewall", user, ip, ctx["exfil_ip"], host, "network_connection", None))
+            t += timedelta(seconds=rng.randint(20, 120))
     else:
         raise ValueError(f"no event template for {tech}")
 
@@ -461,6 +551,93 @@ def build_incident(rng, pattern, variant, noisy=False):
         "inserted": inserted, "pace": "slow" if slow else "fast",
         "techniques": seq, "events": events,
     }
+
+
+def one_edit_away(base):
+    """Every sequence reachable from base with a single skip, insert or swap after the foothold."""
+    foothold = next(i for i, t in enumerate(base) if t in GRADED_FOOTHOLDS)
+    out = set()
+    for i in range(foothold + 1, len(base)):
+        out.add(tuple(base[:i] + base[i + 1:]))
+        if i + 1 < len(base):
+            out.add(tuple(base[:i] + [base[i + 1], base[i]] + base[i + 2:]))
+    for tech in GRADED_INSERTABLE:
+        for i in range(foothold + 1, len(base) + 1):
+            out.add(tuple(base[:i] + [tech] + base[i:]))
+    return out
+
+
+def perturb(rng, base, level):
+    """Apply 0 (exact), 1 (light) or 2 (heavy) edits after the foothold step.
+    An edit removes a step, inserts one, or swaps two neighbours. A heavy result
+    is rejected if one edit could have produced it, and no perturbed result may
+    equal another template. Returns (sequence, [descriptions of the edits])."""
+    foothold = next(i for i, t in enumerate(base) if t in GRADED_FOOTHOLDS)
+    wanted = {"exact": 0, "light": 1, "heavy": 2}[level]
+    others = {tuple(steps) for _, steps in GRADED_TEMPLATES.values() if steps != list(base)}
+    near = one_edit_away(list(base))
+    while True:
+        seq, edits = list(base), []
+        for _ in range(wanted):
+            kind = rng.choice(["skip", "insert", "swap"])
+            if kind == "skip" and len(seq) - foothold > 2:
+                i = rng.randrange(foothold + 1, len(seq))
+                edits.append(f"skip {seq.pop(i)}")
+            elif kind == "insert":
+                tech = rng.choice([t for t in GRADED_INSERTABLE if t not in seq])
+                i = rng.randrange(foothold + 1, len(seq) + 1)
+                seq.insert(i, tech)
+                edits.append(f"insert {tech}")
+            elif kind == "swap" and len(seq) - foothold > 2:
+                i = rng.randrange(foothold + 1, len(seq) - 1)
+                seq[i], seq[i + 1] = seq[i + 1], seq[i]
+                edits.append(f"swap {seq[i + 1]} and {seq[i]}")
+        no_repeat = all(a != b for a, b in zip(seq, seq[1:]))
+        distinct = wanted == 0 or (seq != list(base) and tuple(seq) not in others)
+        truly_heavy = wanted < 2 or tuple(seq) not in near
+        if len(edits) == wanted and no_repeat and distinct and truly_heavy:
+            return seq, edits
+
+
+def build_graded_incident(rng, template, level):
+    family, base = GRADED_TEMPLATES[template]
+    seq, edits = perturb(rng, base, level)
+    desks = {**STAFF, ADMIN_USER: ADMIN_WS}
+    user = rng.choice(list(desks))
+    host = (rng.choice(list(desks.values()) + ["SRV-FILE01", "SRV-DB01"]) if seq[0] == "T1110" else desks[user])
+    ctx = {"user": user, "host": host, "ext_ip": attacker_ip(rng), "exfil_ip": attacker_ip(rng)}
+    if seq[0] == "T1566.001":   # the victim has to be at their desk
+        day = rng.choice([d for d in range(GRADED_DAYS) if (START_DAY + timedelta(days=d)).weekday() < 5])
+        t = START_DAY + timedelta(days=day, hours=9, seconds=rng.randint(0, 6 * 3600))
+    else:
+        t = START_DAY + timedelta(days=rng.randrange(GRADED_DAYS), seconds=rng.randint(0, 22 * 3600))
+    slow = rng.random() < 0.2
+    events = []
+    for tech in seq:
+        step, t = step_events(rng, tech, ctx, t)
+        events += step
+        t += timedelta(seconds=rng.randint(900, 2700) if slow else rng.randint(60, 720))
+    return {"ext_ip": ctx["ext_ip"], "exfil_ip": ctx["exfil_ip"], "pattern": template, "variant": level,
+            "family": family, "edits": edits, "skipped": None, "inserted": None,
+            "pace": "slow" if slow else "fast", "techniques": seq, "events": events}
+
+
+def graded_incidents(rng):
+    plan = [(template, level) for template in sorted(GRADED_TEMPLATES) for level in GRADED_INSTANCES]
+    rng.shuffle(plan)
+    incidents = []
+    for template, level in plan:
+        used = {e[k] for other in incidents for e in other["events"] for k in ("source_ip", "destination_ip")}
+        while True:
+            inc = build_graded_incident(rng, template, level)
+            fresh = not ({inc["ext_ip"], inc["exfil_ip"]} & used)
+            if fresh and not any(overlaps(inc, other) for other in incidents):
+                break
+        incidents.append(inc)
+    incidents.sort(key=lambda inc: inc["events"][0]["ts"])
+    for n, inc in enumerate(incidents, 1):
+        inc["incident_id"] = f"GT-{n:03d}"
+    return incidents
 
 
 def overlaps(a, b, margin=timedelta(hours=3)):
@@ -534,8 +711,8 @@ def add_network_detail(events, seed, noisy):
             port = 25
         elif action == "network_connection" and dst in IP_DEVICE:
             port, size = SERVICE_PORT.get(IP_DEVICE[dst], 445), log_uniform(rng, KB, 2 * MB)
-        elif action == "network_connection" and e.get("technique") == "T1041":
-            port = rng.choice([443, 443, 443, 8443, 4444])
+        elif action == "network_connection" and e.get("technique") in ("T1041", "T1048"):
+            port = rng.choice([21, 22, 2222] if e["technique"] == "T1048" else [443, 443, 443, 8443, 4444])
             # most exfiltration is bulk; one in ten is a small, quiet transfer
             size = log_uniform(rng, 500 * KB, 5 * MB) if rng.random() < 0.1 else log_uniform(rng, 30 * MB, 2000 * MB)
         elif action == "network_connection" and e["user"] == MAIL_USER:
@@ -554,10 +731,14 @@ def iso(ts):
 
 
 def assemble(seed, profile="noisy"):
-    noisy = profile == "noisy"
+    noisy = profile in ("noisy", "graded")
     rng = random.Random(seed)
-    benign = benign_events(rng, noisy)
-    incidents = attack_incidents(rng, noisy)
+    if profile == "graded":
+        benign = benign_events(rng, True, days=GRADED_DAYS)
+        incidents = graded_incidents(rng)
+    else:
+        benign = benign_events(rng, noisy)
+        incidents = attack_incidents(rng, noisy)
 
     everything = list(benign)
     for inc in incidents:
@@ -596,6 +777,7 @@ def assemble(seed, profile="noisy"):
             "end": iso(inc["events"][-1]["ts"]),
             "techniques": inc["techniques"],
             "event_ids": [e["event_id"] for e in inc["events"]],
+            **({"family": inc["family"], "edits": inc["edits"]} if "family" in inc else {}),
         }
         for inc in incidents
     ]
@@ -664,7 +846,7 @@ def summarize(events, labels, truth):
         print(f"  {tech:<11}{TECHNIQUES[tech][0]:<40}{count:>5}")
 
     print("\nincidents per pattern / variant:")
-    for pattern in sorted(PATTERNS):
+    for pattern in sorted({inc["pattern"] for inc in truth}):
         variants = Counter(inc["variant"] for inc in truth if inc["pattern"] == pattern)
         detail = ", ".join(f"{v}={c}" for v, c in sorted(variants.items()))
         print(f"  {pattern}: {sum(variants.values())}  ({detail})")
@@ -679,9 +861,11 @@ def main():
     here = Path(__file__).resolve().parent
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--profile", choices=["noisy", "clean"], default="noisy")
-    parser.add_argument("--out-dir", type=Path, default=here.parent / "processed")
+    parser.add_argument("--profile", choices=["noisy", "clean", "graded"], default="noisy")
+    parser.add_argument("--out-dir", type=Path, default=None)
     args = parser.parse_args()
+    if args.out_dir is None:   # the graded dataset lives beside the default one, never over it
+        args.out_dir = here.parent / "processed" / ("graded" if args.profile == "graded" else "")
 
     events, labels, truth = assemble(args.seed, args.profile)
     validate(events, labels, truth)

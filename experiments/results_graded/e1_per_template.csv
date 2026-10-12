@@ -1,0 +1,19 @@
+template,family,nearest other template,similarity,Markov correct,frequency prior correct,instances
+G01,credential,G02,0.714,9,4,18
+G02,credential,G03,0.804,14,4,30
+G03,credential,G02,0.804,17,5,31
+G04,credential,G13,0.833,9,5,23
+G05,phishing,G08,0.619,9,3,15
+G06,phishing,G05,0.381,13,5,27
+G07,phishing,G05,0.438,12,5,25
+G08,phishing,G05,0.619,9,5,28
+G09,brute,G13,0.354,8,0,20
+G10,brute,G11,0.325,7,0,19
+G11,brute,G10,0.325,5,5,18
+G12,reorder,G01,0.700,4,5,21
+G13,reorder,G04,0.833,4,5,23
+G14,mid,G15,0.278,2,0,20
+G15,mid,G08,0.417,7,0,25
+G16,unrelated,G18,0.325,0,4,16
+G17,unrelated,G18,0.156,0,0,19
+G18,unrelated,G16,0.325,0,0,21

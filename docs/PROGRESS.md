@@ -425,3 +425,31 @@ TODOs carried forward:
 - The graph's `IP.internal` flag uses the bank's prefix whatever dataset is loaded.
 - Use the ordered command transcript in each LSASS metadata file as an order label.
 - Map the 13 unmatched apt29 technique names with MITRE's published crosswalk.
+
+## M10 — experiment redesign — built, reviewed, review fixes applied (docs partly pending)
+
+**Status note (work was cut off by a usage limit here).** The M10 review found 2 Blocking and 11 Should-fix items. The code and result files below already include the fixes (dataset regenerated so that two-edit instances really need two edits; extra rows, per-step and per-template tables, held-out sensitivity, corrected labels and wording). Still to do: copy the review into `REVIEWS.md`, update `DECISIONS.md` X8, rewrite the summary at the top of this file (it still lists M9 and M10 as pending and has stale numbers), and Task 3 (verify Agents 1 and 3).
+
+Reports: `experiments/results_graded/e1.md`, `e2.md`, `e3.md` (+ CSVs). First experiments kept in `experiments/results/`. Code: `experiments/graded.py`, generator profile `graded`, `data/mitre/emulation_plans.json`.
+
+Reproduce: `python data/generator/generate.py --profile graded`; then with `VIRUX_DATASET=graded`: `python -m core.attack_mapper`, `python -m knowledge_graph.build --reset`, `python -m experiments.graded`; then `python -m knowledge_graph.build --reset` without the variable to restore the default graph.
+
+Dataset: 17,707 events, 90 incidents from 18 templates (1 exact, 2 one-edit, 2 two-edit each), 31 techniques, 399 next-step instances. History: template references (leave-own-out) and 8 real ordered emulation plans. No hand-written distractors.
+
+| | First experiments (24 incidents, 90 instances) | Redesigned (90 incidents, 399 instances) |
+|---|---|---|
+| E1 context-free frequency prior | 0.156 (14 / 90) | 0.138 (55 / 399), built from the other templates |
+| E1 related, not identical history | 0.278, from overlapping distractors | **0.323 (129 / 399)**; 69 / 399 with the whole own family removed |
+| E1 own template in history | 0.722 (65 / 90) | 0.416 (166 / 399) |
+| E1 real independent history | MITRE groups 0.000 | real ordered plans 0.073 (29 / 399); groups 0.020 |
+| E2 matching, static vs temporal | 17 vs 17 of 18 | 69 vs 69 of 70 outside the reordered pairs; 0 vs 12 of 20 on them |
+| E2 prediction top-1, static vs temporal | 24 vs 25 of 90 | 108 vs 129 of 399 |
+| E3 ground truth, order-aware / order-free | 22 / 24 and 24 / 24 | 60 / 78 and 38 / 78 (baseline 30) |
+| E3 pipeline | 14 / 24 | 30 / 78, equal to the baseline |
+
+**Does context help?**
+- **Historical: only in-vocabulary history that shares entry sequences with the attack.** 129 against 55 of 399; 80 of the 129 hits are the 2nd or 3rd step; with the own family removed the gain is +14. It does not grow steadily with similarity, and history hurts 3 templates (G12, G13, G16). **Real emulation plans do not help**: 29 / 399 alone, and they lower 129 to 116 when added.
+- **Temporal: order separates attacks with identical technique sets (by construction) and gives a modest top-1 gain (129 vs 108).** No matching gain elsewhere; second-order context adds nothing (order 1 alone: 135).
+- **E3:** unrelated attacks are recognised as novel (15 / 15), near relatives are not (4 / 15); known vs variant is close to arithmetic on edit count; nothing holds on the pipeline.
+
+Mapper on the graded dataset: precision 0.496, recall 0.740, F1 0.594 (`evaluation/results/graded/mapper.txt`). The pipeline rows are weak for three reasons, not only missing tool rules: unknown tools, techniques whose events look identical to another's, and one program carrying two labels; incident fragmentation matters as much.

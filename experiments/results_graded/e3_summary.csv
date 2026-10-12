@@ -1,0 +1,5 @@
+trajectories,similarity,correct (leave-one-out thresholds),incidents,accuracy,majority-class baseline,correct with in-sample thresholds,novel called known or variant,novel incidents,near-novel called novel,far-novel called novel,AUC known vs variant,AUC (known + variant) vs novel,attack-free incidents called known or variant
+ground-truth trajectories,temporal,60,78,0.769,30,65,11,30,4 / 15,15 / 15,0.948,0.872,n/a
+ground-truth trajectories,static,38,78,0.487,30,53,9,30,6 / 15,15 / 15,0.718,0.896,n/a
+pipeline trajectories,temporal,30,78,0.385,30,38,12,30,3 / 15,15 / 15,0.594,0.638,6 / 87
+pipeline trajectories,static,40,78,0.513,30,41,9,30,6 / 15,15 / 15,0.516,0.671,7 / 87

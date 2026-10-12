@@ -1,0 +1,83 @@
+=== ATT&CK mapper vs labels, graded dataset, seed 42 (exact technique id) ===
+events: 17707   labelled attack events: 990   events the mapper mapped: 1478
+
+technique        support    tp    fp    fn    prec  recall      f1
+T1003.001             11     4     0     7   1.000   0.364   0.533
+T1005                 68    47    48    21   0.495   0.691   0.577
+T1012                  0     0     8     0   0.000   0.000   0.000
+T1016                 21    19     0     2   1.000   0.905   0.950
+T1018                 10    10     0     0   1.000   1.000   1.000
+T1021.001             21    20     0     1   1.000   0.952   0.976
+T1021.002              9     8   273     1   0.028   0.889   0.055
+T1033                  9     9    25     0   0.265   1.000   0.419
+T1041                 64    57    41     7   0.582   0.891   0.704
+T1048                 16     0     0    16   0.000   0.000   0.000
+T1053.005             13    12     0     1   1.000   0.923   0.960
+T1057                 17    16     0     1   1.000   0.941   0.970
+T1059.001             94    91    70     3   0.565   0.968   0.714
+T1059.003             18    18    72     0   0.200   1.000   0.333
+T1068                 20    20    16     0   0.556   1.000   0.714
+T1070.004             17     0     0    17   0.000   0.000   0.000
+T1078                 50    50    21     0   0.704   1.000   0.826
+T1082                 51    26     0    25   1.000   0.510   0.675
+T1083                 32    16     0    16   1.000   0.500   0.667
+T1087                 13    13     2     0   0.867   1.000   0.929
+T1105                  5     4     0     1   1.000   0.800   0.889
+T1110                246   246    31     0   0.888   1.000   0.941
+T1133                 15     0     0    15   0.000   0.000   0.000
+T1136.001              2     0     0     2   0.000   0.000   0.000
+T1204.002             25    14    71    11   0.165   0.560   0.255
+T1218.011              0     0     7     0   0.000   0.000   0.000
+T1486                 81     0     0    81   0.000   0.000   0.000
+T1490                  7     0     0     7   0.000   0.000   0.000
+T1547.001              8     0     0     8   0.000   0.000   0.000
+T1560.001             14    14    44     0   0.241   1.000   0.389
+T1566.001             25    16    16     9   0.500   0.640   0.561
+T1569.002              5     0     0     5   0.000   0.000   0.000
+T1685.005              3     3     0     0   1.000   1.000   1.000
+micro                                        0.496   0.740   0.594
+macro_labelled                               0.518   0.630   0.517
+macro_all                                    0.487   0.592   0.486
+detection                                    0.567   0.846   0.679
+
+micro          = over all events, exact technique
+macro_labelled = unweighted mean over techniques that occur in the labels
+                 (false positives on techniques that are never a label are not charged)
+macro_all      = unweighted mean over every technique labelled or predicted
+detection      = event flagged with any technique vs labelled as attack
+
+confusion (true -> mapped), errors only:
+  benign      -> T1021.002     273
+  T1486       -> none           81
+  benign      -> T1204.002      71
+  benign      -> T1059.001      70
+  benign      -> T1059.003      56
+  benign      -> T1005          48
+  benign      -> T1110          31
+  benign      -> T1560.001      28
+  T1082       -> T1033          25
+  benign      -> T1041          25
+  T1070.004   -> none           17
+  T1005       -> T1560.001      16
+  T1048       -> T1041          16
+  T1083       -> T1059.003      16
+  benign      -> T1068          16
+  benign      -> T1566.001      16
+  T1133       -> T1078          15
+  T1204.002   -> none           11
+  T1566.001   -> none            9
+  T1547.001   -> T1012           8
+  T1003.001   -> T1218.011       7
+  T1041       -> none            7
+  T1490       -> none            7
+  benign      -> T1078           6
+  T1005       -> none            5
+  T1569.002   -> none            5
+  T1059.001   -> none            3
+  T1016       -> none            2
+  T1136.001   -> T1087           2
+  T1021.001   -> none            1
+  T1021.002   -> none            1
+  T1053.005   -> none            1
+  T1057       -> none            1
+  T1105       -> none            1
