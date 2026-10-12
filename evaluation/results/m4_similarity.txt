@@ -1,0 +1,133 @@
+=== historical attack database ===
+curated       11 attacks; sequence length min 4, median 5, max 6
+mitre_group  167 attacks; sequence length min 2, median 17, max 87
+ordering: curated = hand-specified; mitre_group = INFERRED from tactic order, not observed
+
+MITRE groups using each of the dataset's 14 parent techniques (of 167):
+  T1003 58  T1005 46  T1021 61  T1041 27  T1053 58  T1059 124  T1068 22  T1078 66  T1082 58  T1083 52  T1110 26  T1204 99  T1566 98  T1685 44
+
+=== matching on GROUND-TRUTH trajectories (n = 24 incidents) ===
+truth   pattern variant      top match    sim  source      runner-up    sim  trajectory
+GT-001  D       skip         HIST-C06   0.417  curated     HIST-C11   0.343  T1110 > T1078 > T1005 > T1041
+GT-002  C       skip         HIST-C03   0.800  curated     HIST-C01   0.550  T1078 > T1059 > T1021 > T1041
+GT-003  C       base         HIST-C03   1.000  curated     HIST-C01   0.800  T1078 > T1059 > T1068 > T1021 > T1041
+GT-004  B       skip+insert  HIST-C02   0.633  curated     HIST-G0013 0.400  T1566 > T1204 > T1003 > T1685 > T1021
+GT-005  B       base         HIST-C02   1.000  curated     HIST-G0062 0.450  T1566 > T1204 > T1059 > T1003 > T1021
+GT-006  D       base         HIST-C07   0.550  curated     HIST-C05   0.438  T1110 > T1078 > T1083 > T1005 > T1041
+GT-007  A       skip         HIST-C01   0.750  curated     HIST-C03   0.600  T1078 > T1059 > T1068
+GT-008  A       base         HIST-C01   1.000  curated     HIST-C03   0.800  T1078 > T1059 > T1068 > T1021
+GT-009  B       skip         HIST-C02   0.800  curated     HIST-G0013 0.500  T1566 > T1204 > T1059 > T1003
+GT-010  D       insert       HIST-C07   0.464  curated     HIST-C05   0.333  T1110 > T1078 > T1083 > T1005 > T1053 > T1041
+GT-011  A       insert       HIST-C01   0.800  curated     HIST-C03   0.733  T1078 > T1059 > T1068 > T1021 > T1053
+GT-012  D       skip+insert  HIST-C06   0.343  curated     HIST-C07   0.343  T1110 > T1078 > T1083 > T1082 > T1041
+GT-013  A       base         HIST-C01   1.000  curated     HIST-C03   0.800  T1078 > T1059 > T1068 > T1021
+GT-014  B       base         HIST-C02   1.000  curated     HIST-G0062 0.450  T1566 > T1204 > T1059 > T1003 > T1021
+GT-015  A       skip+insert  HIST-C01   0.550  curated     HIST-C03   0.450  T1078 > T1068 > T1082 > T1021
+GT-016  D       base         HIST-C07   0.550  curated     HIST-C05   0.438  T1110 > T1078 > T1083 > T1005 > T1041
+GT-017  C       base         HIST-C03   1.000  curated     HIST-C01   0.800  T1078 > T1059 > T1068 > T1021 > T1041
+GT-018  B       insert       HIST-C02   0.833  curated     HIST-C04   0.417  T1566 > T1204 > T1059 > T1003 > T1082 > T1021
+GT-019  D       base         HIST-C07   0.550  curated     HIST-C05   0.438  T1110 > T1078 > T1083 > T1005 > T1041
+GT-020  C       base         HIST-C03   1.000  curated     HIST-C01   0.800  T1078 > T1059 > T1068 > T1021 > T1041
+GT-021  C       insert       HIST-C03   0.833  curated     HIST-C01   0.667  T1078 > T1083 > T1059 > T1068 > T1021 > T1041
+GT-022  A       base         HIST-C01   1.000  curated     HIST-C03   0.800  T1078 > T1059 > T1068 > T1021
+GT-023  B       base         HIST-C02   1.000  curated     HIST-G0062 0.450  T1566 > T1204 > T1059 > T1003 > T1021
+GT-024  C       skip+insert  HIST-C01   0.800  curated     HIST-C03   0.633  T1078 > T1059 > T1083 > T1068 > T1021
+
+reference patterns: A = HIST-C01, B = HIST-C02, C = HIST-C03; pattern D has no reference (novel by design)
+top-1 is the pattern's own reference: 17 / 18 incidents of patterns A-C (17 / 18 if a tie for first place counts)
+source of the top match over all incidents: curated 24
+
+=== matching on PIPELINE trajectories (mapper incidents, W = 30 min, mapper techniques; n = 24 incidents) ===
+truth   pattern variant      top match    sim  source      runner-up    sim  trajectory
+GT-001  D       skip         HIST-C06   0.417  curated     HIST-C11   0.343  T1110 > T1078 > T1005 > T1041
+GT-002  C       skip         HIST-C03   0.600  curated     HIST-C01   0.450  T1078 > T1059 > T1041
+GT-003  C       base         HIST-C01   0.250  curated     HIST-G0028 0.250  T1059
+GT-004  B       skip+insert  HIST-C02   0.633  curated     HIST-G0013 0.400  T1566 > T1204 > T1003 > T1685 > T1021
+GT-005  B       base         HIST-C02   0.733  curated     HIST-G0062 0.450  T1566 > T1204 > T1059 > T1218 > T1021
+GT-006  D       base         HIST-C06   0.417  curated     HIST-C11   0.343  T1110 > T1078 > T1083 > T1059
+GT-007  A       skip         HIST-C01   0.250  curated     HIST-G0028 0.250  T1059
+GT-008  A       base         HIST-C01   0.900  curated     HIST-C03   0.800  T1078 > T1059 > T1068 > T1021 > T1068
+GT-009  B       skip         HIST-G0095 0.429  mitre_group HIST-G0075 0.375  T1059 > T1204 > T1218
+GT-010  D       insert       HIST-C03   0.354  curated     HIST-C05   0.338  T1110 > T1078 > T1059 > T1083 > T1059 > T1560 > T1053 > T1041
+GT-011  A       insert       HIST-C01   0.800  curated     HIST-C03   0.733  T1078 > T1059 > T1068 > T1021 > T1053
+GT-012  D       skip+insert  HIST-C06   0.250  curated     HIST-C11   0.200  T1110
+GT-013  A       base         HIST-C01   0.500  curated     HIST-G0028 0.500  T1078 > T1059
+GT-014  B       base         (no inferred incident)
+GT-015  A       skip+insert  HIST-C01   0.550  curated     HIST-C03   0.450  T1078 > T1068 > T1033 > T1021
+GT-016  D       base         HIST-C05   0.438  curated     HIST-C03   0.414  T1110 > T1078 > T1059 > T1005 > T1041
+GT-017  C       base         HIST-C01   0.750  curated     HIST-C03   0.600  T1059 > T1068 > T1021
+GT-018  B       insert       HIST-C02   0.714  curated     HIST-C04   0.364  T1566 > T1204 > T1059 > T1003 > T1033 > T1082 > T1021
+GT-019  D       base         HIST-C03   0.571  curated     HIST-C01   0.429  T1110 > T1078 > T1059 > T1560 > T1021 > T1560 > T1041
+GT-020  C       base         HIST-C03   1.000  curated     HIST-C01   0.800  T1078 > T1059 > T1068 > T1021 > T1041
+GT-021  C       insert       HIST-C03   0.583  curated     HIST-C01   0.500  T1078 > T1059 > T1083 > T1059 > T1068 > T1041
+GT-022  A       base         HIST-C01   1.000  curated     HIST-C03   0.800  T1078 > T1059 > T1068 > T1021
+GT-023  B       base         HIST-G0013 1.000  mitre_group HIST-G0103 0.667  T1566 > T1204
+GT-024  C       skip+insert  HIST-C05   0.333  curated     HIST-G0124 0.286  T1059 > T1083 > T1059
+
+reference patterns: A = HIST-C01, B = HIST-C02, C = HIST-C03; pattern D has no reference (novel by design)
+top-1 is the pattern's own reference: 12 / 18 incidents of patterns A-C (12 / 18 if a tie for first place counts)
+source of the top match over all incidents: curated 21, mitre_group 2
+
+=== matching an attack IN PROGRESS (strict prefixes of ground-truth A-C incidents) ===
+top match is the pattern's reference: 34 of 66 prefixes (complete trajectories: see above)
+by prefix length: 1 step(s) 0/18, 2 step(s) 11/18, 3 step(s) 10/17, 4 step(s) 11/11, 5 step(s) 2/2
+top match is a MITRE group record: 30 of 66 prefixes
+Cause: the score divides by the longer sequence, so a prefix scores low against its own,
+longer, reference and very short group records (2 to 4 techniques) outrank it.
+
+=== contribution of the real MITRE group records to matching ===
+top match is a hand-written sequence for 24 of 24 ground-truth incidents;
+the best GROUP match is a record of 4 techniques or fewer for 20 of 24.
+Group sequences have a median of 17 techniques, so a 4-6 step incident cannot score high
+against them. All matching signal comes from the 11 hand-written sequences.
+
+=== how 'novel' is pattern D to the database? ===
+4 hand-written distractors share a 2-step path with pattern D: HIST-C05, HIST-C06, HIST-C07, HIST-C11
+truth    best similarity   without those distractors
+GT-001             0.417                       0.243
+GT-006             0.550                       0.243
+GT-010             0.464                       0.278
+GT-012             0.343                       0.225
+GT-016             0.550                       0.243
+GT-019             0.550                       0.243
+No single record equals pattern D, but its parts are in the database because the same
+author wrote the distractors and the generator.
+
+=== false matches: inferred incidents that contain NO attack event ===
+22 such incidents come out of the label-free pipeline (mapper filter, W = 30 min).
+their best historical similarity: min 0.200, median 0.400, max 0.667
+  at or above 0.3: 14 of 22
+  at or above 0.5: 3 of 22
+  at or above 0.6: 2 of 22
+1 of them contain T1110 (brute force).
+
+=== brute-force skew check ===
+T1110 is 114 of 275 attack events (41.5%), all in pattern D.
+After collapsing consecutive repeats it is 6 of 114 trajectory steps.
+
+mean similarity between incidents, by pattern pair (n = number of incident pairs):
+  one entry per EVENT (not collapsed)
+                 A           B           C           D
+    A   0.710 n=15  0.249 n=36  0.568 n=36  0.087 n=36
+    B   0.249 n=36  0.719 n=15  0.206 n=36  0.002 n=36
+    C   0.568 n=36  0.206 n=36  0.643 n=15  0.182 n=36
+    D   0.087 n=36  0.002 n=36  0.182 n=36  0.754 n=15
+  collapsed (what the system uses)
+                 A           B           C           D
+    A   0.712 n=15  0.207 n=36  0.641 n=36  0.143 n=36
+    B   0.207 n=36  0.769 n=15  0.180 n=36  0.004 n=36
+    C   0.641 n=36  0.180 n=36  0.772 n=15  0.259 n=36
+    D   0.143 n=36  0.004 n=36  0.259 n=36  0.796 n=15
+
+best curated match per pattern-D incident (event-level sequence vs collapsed):
+  GT-001  raw HIST-C07 0.214   collapsed HIST-C06 0.417
+  GT-006  raw HIST-C07 0.312   collapsed HIST-C07 0.550
+  GT-010  raw HIST-C07 0.257   collapsed HIST-C07 0.464
+  GT-012  raw HIST-C07 0.176   collapsed HIST-C07 0.343
+  GT-016  raw HIST-C07 0.306   collapsed HIST-C07 0.550
+  GT-019  raw HIST-C07 0.304   collapsed HIST-C07 0.550
+
+ANSWER: no skew towards pattern D. D-to-D similarity is 0.754 per event and 0.796 collapsed;
+D-to-other-pattern similarity is 0.090 per event and 0.135 collapsed. Brute-force volume does not
+pull other patterns towards D in either form, and without collapsing D matches the curated
+sequences worse, not better. Collapsing is kept because a trajectory is a list of steps.

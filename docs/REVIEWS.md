@@ -140,3 +140,96 @@ Clean, deterministic, contract-conformant, uses no labels, numbers reproduce. Bu
 | Tests | Added for T1041, T1005, T1068, T1078, logoff, several Office launches, process paths. |
 | Nits | Done: process path/case, relative path in output. **TODO:** burst key misses spraying; duplicated `INTERNAL_PREFIX`. |
 
+---
+
+## M4 — historical attack database and similarity engine
+
+Reviewed together with M5 in one pass, on the noisy dataset. The first attempt at this review was lost to an API error overnight; this is the completed second run.
+
+Reviewer verified: both results files reproduce byte-for-byte; Levenshtein, Jaccard, the 0.5/0.5 combination, sort order, top-k, `common_techniques` and contract 4 key order are correct; empty and unknown trajectories give `matches: []`; the tactic-order derivation is implemented as documented (9 of 176 groups have fewer than 2 parent techniques and are dropped, leaving 167).
+
+### Blocking
+
+None.
+
+### Should-fix
+
+1. **Matching is only evaluated on complete trajectories, but live use is prefixes.** Over all 66 strict prefixes of the A–C ground-truth incidents the top match is the pattern's reference in 34 of 66, against the reported 17/18; a MITRE group is the top match in 30 of 66 (0/18 at length 1, 11/18 at 2, 10/17 at 3, 11/11 at 4). Cause: both score components normalise by the longer sequence, penalising a prefix of a long reference and rewarding tiny records.
+2. **The real-MITRE part of the database is effectively inert for matching.** Group sequences have median length 17, so a 5-step incident is capped near 0.29 against a median group; the best group match is a record of length 2 or 4 in 20 of 24 cases; curated is the top match 24/24. On pipeline fragments 2-step groups win at 1.000 with an inferred order.
+3. **"Novel by design" needs a number next to it.** Every bigram of pattern D exists in a distractor. With those four removed, D's top similarity falls from 0.343–0.550 to 0.225–0.278.
+4. **No false-match figure.** The 22 mapper incidents with no attack event get top similarities of 0.20–0.667. D base (0.550) ties an A skip+insert variant (0.550) and sits below a B skip+insert variant (0.633). No single threshold separates known, variant, novel and benign.
+5. **The skew check is correct but does not state its answer, and covers ground truth only.** The data says there is no skew.
+6. **`HIST-NNN` ids are positional**; adding one curated sequence renumbers all 167 groups.
+7. **Inferred order has two artefacts worth documenting**: within a tactic the order is by technique id; multi-tactic techniques use the earliest tactic, so T1078 always precedes T1110.
+
+### Nits
+
+- Rounding before sorting creates ties; sort on the raw score.
+- A negative `top_k` slices from the end.
+- `lru_cache` returns one shared mutable list; a missing file raises a bare `FileNotFoundError`.
+- Static and temporal modes both give 17/18 on complete trajectories, so E2 will show no matching difference.
+- `trajectories.py` sets `timestamp: ""`, not a valid contract-3 timestamp (harmless).
+
+### Resolution
+
+| Finding | Status |
+|---|---|
+| 1 prefix matching | Reported: `m4_similarity.txt` now has the in-progress table (34 of 66). The measure itself is unchanged; a prefix-aware score is a **TODO**. |
+| 2 groups inert | Reported in `m4_similarity.txt` and `PROGRESS.md`. |
+| 3 novelty of D | Reported: best similarity with and without the four overlapping distractors, per incident. |
+| 4 false-match figure | Reported: similarity distribution of the 22 attack-free inferred incidents; E3 gains a benign class. |
+| 5 skew answer | Fixed: the report prints the conclusion and a pipeline-side line. |
+| 6 positional ids | Fixed: `HIST-C01…` for curated, `HIST-G0016` style for groups. |
+| 7 order artefacts | Documented in `prediction/historical.py`. |
+| Nits | Fixed: raw-score sort, `top_k` clamp, immutable cache, clear error. Empty timestamp left as is. |
+
+---
+
+## M5 — Markov prediction and evaluation harness
+
+Reviewer verified: `m5_prediction.txt` reproduces byte-for-byte; counting, backoff, `MIN_SUPPORT`, Top-1/Top-3/MRR arithmetic, the macro definition, the chance row and contract 5 key order are correct; sensitivity of default top-1 to `(MAX_ORDER, MIN_SUPPORT)` is 0.622–0.733 and the chosen cell is not the best, so there is no sign of tuning.
+
+### Blocking
+
+1. **Evidence is false at terminal steps.** Counts were keyed on "context followed by something", so a technique that only ends historical sequences was treated as never seen. `predict_next` on the full pattern C trajectory said the hand-specified sequences "do not contain the last step" although 3 of 11 contain T1041, then predicted T1567 at 0.5 from the group tier. The same defect undercounted occurrences ("T1021 occur 3 times in 3 of 11" when it is in 5 of 11). An empty trajectory produced a false statement too.
+2. **"Leave-pattern-out never sees the tested pattern" is false for the rows that include the database.** The curated reference of the held-out pattern stayed in. "default + other patterns" reported 0.744; dropping the held-out pattern's own reference gives 0.544; treating A and C as one family (A's reference is a prefix of C's) gives 0.311. Even "other patterns only" (0.311) is A/C cross-leak.
+3. **"D is novel" with top-1 0.583 is misleading as printed.** With the four D-overlapping distractors removed D scores 0/24. All of D's score comes from distractors written by the generator's author.
+4. **The pipeline table reads as end-to-end accuracy and is not.** Prefix and target both come from the mapper's trajectory. Of the 70 instances only 43 are transitions that exist in the paired true incident; against the 90 true transitions that is about 0.344, not 0.457. Three single-step incidents are dropped silently.
+
+### Should-fix
+
+1. Add a by-variant breakdown: base 39/45 (0.867), variants 22/45 (0.489). Base incidents of A and B are verbatim copies of curated records, so the headline is roughly half memorisation.
+2. Tie-breaking by technique id decides a visible share of top-1 (between 0.578 and 0.733 depending on tie-break alone). Report a tie-aware top-1.
+3. The group tier is a Markov chain over an id-sorted list; its transitions are sort adjacency. Drop the tier or replace it; suppress "follows the observed order" when it answers.
+4. "Closest historical attack" always queries the full database whatever predictor was passed.
+5. MRR uses the full ranking while contract 5 exposes the top 5; uniform-over-222 is a straw baseline. Add a frequency baseline.
+6. No test covers evidence truth, terminal steps, an empty trajectory or tiered evidence.
+
+### Nits
+
+- Macro P/R/F1 averages over classes with 1–2 instances; print the class count.
+- "One instance is about one percentage point" is true only for n = 90.
+- Carry the count instead of reconstructing it with `round`.
+- The cached default predictor is never invalidated.
+- `StaticPredictor` returns `[]` for an empty path, unlike Markov.
+
+### Reviewer verdict
+
+Clean, deterministic, reproducible, contracts met in shape, no sign of hyperparameter tuning. M5 should not be committed as it was. The honest summary: 11 hand-written sequences by the generator's author carry all the signal, about half of the headline is recall of verbatim templates, and the real MITRE group data contributes nothing to matching or prediction in its tactic-and-id-sorted form.
+
+### Resolution
+
+| Finding | Status |
+|---|---|
+| Blocking 1 false evidence | **Fixed.** "Ended there" is a counted outcome; a context's occurrences include terminal positions; the empty trajectory uses first-step counts; evidence is built from carried counts. A completed pattern C now returns no prediction and says "3 of those 3 were the last step of their trajectory". Tests check evidence numbers against a recount. |
+| Blocking 2 leave-pattern-out leak | **Fixed.** Protocols `no_own_reference` and `leave_family_out` remove the reference sequences of the tested incident's family (A and C together) and the family's incidents. The old 0.744 row is gone; the corrected figure is 0.311. |
+| Blocking 3 pattern D | **Fixed.** Both rows are printed side by side: 14/24 with the distractors, 0/24 without. |
+| Blocking 4 pipeline table | **Fixed.** Retitled "agreement with the pipeline's own next step"; a strict end-to-end line scores against all 90 true transitions (33/90); incidents without a trajectory or with a single step are counted. |
+| 1 by-variant | Fixed: base 42/45, variants 23/45 with the corrected model. |
+| 2 ties | Fixed: `top1 tie` column. |
+| 3 group tier | Fixed: removed. The default model uses hand-specified sequences only (decision R5). |
+| 4 closest-attack line | Fixed: only with the default predictor, and marked as not used for the probabilities. |
+| 5 baselines, MRR depth | Fixed: frequency baseline row; MRR depth stated. |
+| 6 tests | Added. |
+| Nits | Done except the default-predictor cache (**TODO**; restart after rebuilding the database). |
+

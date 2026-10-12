@@ -107,3 +107,57 @@ TODOs carried forward:
 - Brute-force burst key is `(source, host)`; password spraying across hosts is missed.
 - Benign off-hours activity does not exist in the data, which flatters the off-hours exfiltration sub-rule.
 - `INTERNAL_PREFIX` is duplicated in `core/environment.py` and `knowledge_graph/config.py`.
+
+## M4 — historical attack database and similarity — done
+
+Built: `prediction/historical.py` → `data/mitre/historical_attacks.json` (167 MITRE groups with inferred order, 11 hand-written sequences), `prediction/similarity.py` (`match_historical`, contract 4), `evaluation/similarity_eval.py`. Output: `evaluation/results/m4_similarity.txt`.
+
+| Measure | Result | Sample |
+|---|---|---|
+| Top match is the pattern's own reference, complete ground-truth trajectories | 17 / 18 | A–C incidents |
+| Same, pipeline trajectories | 12 / 18 | A–C incidents |
+| Same, attack still in progress (strict prefixes) | 34 / 66 | prefixes of A–C incidents |
+| Top match is a hand-written sequence | 24 / 24 | all ground-truth incidents |
+| Pattern D best similarity | 0.343–0.550; 0.225–0.278 without the 4 overlapping distractors | 6 incidents |
+| Attack-free inferred incidents with similarity ≥ 0.5 | 3 / 22 (max 0.667) | pipeline false incidents |
+
+What this means:
+- **All matching signal comes from the 11 hand-written sequences**, written by the author of the generator. The real MITRE group records never win on complete trajectories: they are too long (median 17 techniques) to score against a 4–6 step incident.
+- **Matching an attack in progress is weak** (34 / 66): the score divides by the longer sequence, so short group records outrank the true reference early on.
+- **Pattern D is not really novel**: no single record equals it, but its parts are in the distractors.
+- **Brute-force skew: none.** T1110 is 41.5% of attack events but 6 of 114 trajectory steps after collapsing; D-to-other similarity is 0.090 per event and 0.135 collapsed.
+
+Review: 0 Blocking, 7 Should-fix (6 addressed, 1 TODO).
+
+TODO: prefix-aware similarity for in-progress incidents; a containment measure or separate reporting for group records.
+
+## M5 — Markov prediction and evaluation harness — done (numbers corrected after review)
+
+Built: `prediction/markov.py` (`predict_next`, contract 5 with a count-based evidence list), `prediction/static.py` (order-free comparison model), `evaluation/prediction_eval.py`. Output: `evaluation/results/m5_prediction.txt`.
+
+Next-step prediction on ground-truth trajectories, 90 instances from 24 incidents:
+
+| Training data | Top-1 | Top-1 tie-aware | Top-3 | MRR | Correct |
+|---|---|---|---|---|---|
+| No knowledge (uniform over 222 techniques, analytic) | 0.005 | 0.005 | 0.014 | 0.027 | – |
+| Most frequent next step, no context | 0.178 | 0.178 | 0.478 | 0.384 | 16 / 90 |
+| MITRE groups only | 0.000 | 0.000 | 0.000 | 0.050 | 0 / 90 |
+| **Default: hand-written sequences** | **0.722** | **0.676** | **0.789** | **0.752** | **65 / 90** |
+| Groups + hand-written pooled | 0.311 | 0.286 | 0.411 | 0.423 | 28 / 90 |
+| Hand-written minus own family's reference (**unseen pattern**) | **0.278** | 0.261 | 0.444 | 0.357 | 25 / 90 |
+| Hand-written minus the 4 distractors overlapping D | 0.578 | 0.556 | 0.622 | 0.618 | 52 / 90 |
+| Other incidents only, leave-one-out | 0.811 | 0.800 | 0.833 | 0.822 | 73 / 90 |
+| Other families' incidents only | 0.078 | 0.047 | 0.189 | 0.143 | 7 / 90 |
+
+How to read it:
+- **0.722 is mostly memorisation.** Base incidents (verbatim copies of a training sequence): 42 / 45. Variants: 23 / 45.
+- **For a pattern the history has not seen, top-1 is 0.278**, and 0 / 18 and 0 / 24 for patterns A and C.
+- **Pattern D scores 14 / 24 only because of the distractors**; 0 / 24 without them.
+- **MITRE group data contributes nothing** to prediction (0 / 90 alone; harmful when pooled).
+- **Strict end-to-end** (label-free pipeline, counted against all 90 true transitions): **33 / 90 = 0.367**. The pipeline reproduced the true path up to the prediction point for 47 of the 90.
+
+Figures that were wrong before the review and are now removed: "leave-pattern-out with history 0.744" (the held-out pattern's reference was still in the training data; corrected 0.311), and the pipeline table presented as accuracy (it measures agreement with the mapper's own next label: 33 / 70).
+
+Review: 4 Blocking (all fixed), 6 Should-fix (all addressed).
+
+TODO: the cached default predictor is not refreshed when the historical database is rebuilt in a running process.

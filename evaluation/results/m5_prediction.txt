@@ -1,0 +1,91 @@
+=== next-step prediction on GROUND-TRUTH trajectories (24 incidents) ===
+training data                                     top1 top1tie   top3    mrr      P      R     F1  correct/instances incidents
+------------------------------------------------------------------------------------------------------------------------------
+no knowledge: uniform over 222 techniques        0.005   0.005  0.014  0.027      -      -      -         (analytic)         -
+curated, most frequent next step (no context)    0.178   0.178  0.478  0.384  0.015  0.083  0.025            16 / 90        24
+MITRE groups only (inferred order)               0.000   0.000  0.000  0.050  0.000  0.000  0.000             0 / 90        24
+DEFAULT: curated (hand-specified)                0.722   0.676  0.789  0.752  0.523  0.572  0.543            65 / 90        24
+groups + curated pooled in one table             0.311   0.286  0.411  0.423  0.249  0.225  0.236            28 / 90        24
+curated minus 4 distractors overlapping D        0.578   0.556  0.622  0.618  0.383  0.397  0.370            52 / 90        24
+curated minus own family's reference             0.278   0.261  0.444  0.357  0.302  0.290  0.287            25 / 90        24
+other incidents only, leave-one-out              0.811   0.800  0.833  0.822  0.634  0.650  0.639            73 / 90        24
+curated + other incidents, leave-one-out         0.811   0.800  0.833  0.822  0.634  0.650  0.639            73 / 90        24
+other families' incidents only                   0.078   0.047  0.189  0.143  0.023  0.043  0.030             7 / 90        24
+curated minus own ref + other families           0.311   0.256  0.433  0.355  0.331  0.312  0.311            28 / 90        24
+
+DEFAULT model by pattern. A, B, C have their reference sequence in the database. D has no
+single reference, but every 2-step path of D occurs in a hand-written distractor:
+  pattern A                                      0.778   0.778  0.833  0.806  0.503  0.527  0.508            14 / 18         6
+  pattern B                                      0.792   0.688  0.875  0.833  0.537  0.572  0.546            19 / 24         6
+  pattern C                                      0.750   0.764  0.833  0.785  0.700  0.653  0.672            18 / 24         6
+  pattern D                                      0.583   0.500  0.625  0.597  0.433  0.411  0.421            14 / 24         6
+  pattern D, overlapping distractors removed     0.000   0.000  0.000  0.058  0.000  0.000  0.000             0 / 24         6
+
+curated minus own family's reference, by pattern (the unseen-pattern setting):
+  pattern A                                      0.000   0.000  0.278  0.139  0.000  0.000  0.000             0 / 18         6
+  pattern B                                      0.458   0.458  0.542  0.500  0.271  0.333  0.295            11 / 24         6
+  pattern C                                      0.000   0.019  0.292  0.139  0.000  0.000  0.000             0 / 24         6
+  pattern D                                      0.583   0.500  0.625  0.597  0.433  0.411  0.421            14 / 24         6
+
+DEFAULT model by variant:
+  base (verbatim template)                       0.933   0.867  0.933  0.933  0.861  0.889  0.873            42 / 45        12
+  variant (skip and/or insert)                   0.511   0.485  0.644  0.570  0.401  0.454  0.418            23 / 45        12
+
+incidents contributing no instance: 0 without a trajectory, 0 with a single step; macro P/R/F1 average over 12 target techniques.
+
+=== AGREEMENT WITH THE PIPELINE'S OWN NEXT STEP (mapper incidents + mapper techniques).
+    Prefix and target both come from the pipeline, including its mapping errors.
+    This is NOT end-to-end accuracy; see the strict end-to-end line below the table ===
+training data                                     top1 top1tie   top3    mrr      P      R     F1  correct/instances incidents
+------------------------------------------------------------------------------------------------------------------------------
+no knowledge: uniform over 222 techniques        0.005   0.005  0.014  0.027      -      -      -         (analytic)         -
+curated, most frequent next step (no context)    0.229   0.229  0.471  0.393  0.015  0.067  0.025            16 / 70        20
+MITRE groups only (inferred order)               0.014   0.014  0.014  0.064  0.010  0.013  0.011             1 / 70        20
+DEFAULT: curated (hand-specified)                0.471   0.450  0.557  0.517  0.278  0.303  0.283            33 / 70        20
+groups + curated pooled in one table             0.171   0.179  0.200  0.251  0.118  0.123  0.116            12 / 70        20
+curated minus 4 distractors overlapping D        0.471   0.464  0.543  0.520  0.206  0.246  0.212            33 / 70        20
+curated minus own family's reference             0.186   0.177  0.371  0.275  0.207  0.147  0.163            13 / 70        20
+other incidents only, leave-one-out              0.500   0.514  0.571  0.543  0.264  0.272  0.263            35 / 70        20
+curated + other incidents, leave-one-out         0.557   0.538  0.600  0.586  0.302  0.324  0.308            39 / 70        20
+other families' incidents only                   0.229   0.233  0.314  0.299  0.023  0.067  0.034            16 / 70        20
+curated minus own ref + other families           0.300   0.317  0.514  0.413  0.203  0.181  0.184            21 / 70        20
+
+DEFAULT model by pattern. A, B, C have their reference sequence in the database. D has no
+single reference, but every 2-step path of D occurs in a hand-written distractor:
+  pattern A                                      0.667   0.667  0.733  0.700  0.483  0.470  0.460            10 / 15         5
+  pattern B                                      0.412   0.382  0.588  0.500  0.219  0.287  0.224             7 / 17         5
+  pattern C                                      0.600   0.600  0.600  0.617  0.633  0.587  0.543             9 / 15         5
+  pattern D                                      0.304   0.261  0.391  0.344  0.250  0.188  0.208             7 / 23         5
+  pattern D, overlapping distractors removed     0.217   0.217  0.261  0.278  0.037  0.125  0.057             5 / 23         5
+
+curated minus own family's reference, by pattern (the unseen-pattern setting):
+  pattern A                                      0.000   0.000  0.267  0.133  0.000  0.000  0.000             0 / 15         5
+  pattern B                                      0.353   0.353  0.529  0.441  0.156  0.225  0.161             6 / 17         5
+  pattern C                                      0.000   0.027  0.267  0.124  0.000  0.000  0.000             0 / 15         5
+  pattern D                                      0.304   0.261  0.391  0.344  0.250  0.188  0.208             7 / 23         5
+
+DEFAULT model by variant:
+  base (verbatim template)                       0.625   0.609  0.719  0.667  0.453  0.476  0.463            20 / 32        10
+  variant (skip and/or insert)                   0.342   0.316  0.421  0.390  0.282  0.256  0.250            13 / 38        10
+
+incidents contributing no instance: 1 without a trajectory, 3 with a single step; macro P/R/F1 average over 15 target techniques.
+
+STRICT END-TO-END, DEFAULT model: 33 of 90 true transitions predicted correctly (top-1 0.367). The pipeline reproduced the true path up to the prediction point for 47 of them.
+
+notes:
+- Sample: 24 synthetic incidents from 4 templates. With 90 instances one instance
+  is about 1.1 points; in a per-pattern row (18-24 instances) it is 4 to 6 points.
+- 'curated' is 11 sequences written by hand by the author of the data generator.
+  Three of them are the reference forms of patterns A, B and C, so a base
+  incident of those patterns is a verbatim copy of a training sequence. All the
+  predictive signal in this table comes from those 11 sequences.
+- MITRE ATT&CK group data contributes nothing to prediction here: alone it
+  scores zero and pooled it lowers accuracy, because the order of a group's
+  techniques is not published and the order inferred from tactic and technique
+  id produces artificial transitions. The default model therefore does not use
+  it. That choice was made after seeing these results on these 24 incidents.
+- Pattern D is 'novel' only in the sense that no single historical sequence
+  equals it. See the two pattern-D rows.
+- leave-one-out trains on sibling incidents of the same pattern, so it measures
+  recall of a known pattern.
+- 'correct / instances' is the top1 count. top1tie removes alphabetical luck.

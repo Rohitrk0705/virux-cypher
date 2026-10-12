@@ -51,3 +51,18 @@ One line each: what was decided and why. Newest milestone last.
 | A11 | The generator has two profiles: `noisy` (default) and `clean` (the first dataset, byte-identical). | Benign data rebuilt as you asked, while keeping the old dataset reproducible so old and new figures can be compared with the same code. |
 | A12 | Apart from A8–A10 the rules were not tuned against the noise (for example T1021.002 stays at 7% precision). | Fitting rules to noise written by the same author would re-inflate the number. Refinements are listed as next steps. |
 | A13 | The default pipeline is `method = mapper`, `technique source = mapper`. | Both are label-free. Ground truth is an explicit opt-in used only by evaluation. |
+
+## M4 / M5 — historical database, similarity, prediction
+
+| # | Decision | Rationale |
+|---|---|---|
+| R1 | Historical database = 167 MITRE ATT&CK groups (order inferred from tactic position, then technique id) + 11 hand-written sequences. | Your specification. The inferred order is flagged on every record. |
+| R2 | Three hand-written sequences are the reference forms of patterns A, B and C; pattern D has none; eight are distractors. | E3 needs known, variant and novel classes. The distractors were written before any result was seen and were not changed afterwards. |
+| R3 | Similarity = 0.5 × Jaccard of technique sets + 0.5 × (1 − edit distance / longer length), on parent ids with repeats collapsed. | Overlap and edit distance as you asked; equal weights, no fitting. "Temporal" means order only, because historical records carry no timestamps. |
+| R4 | `common_techniques` lists the incident's own ids (sub-technique form) whose parent occurs in the historical attack. | Matches the example in contract 4, which shows sub-technique ids. |
+| R5 | The default predictor is trained on the hand-written sequences only; MITRE group records are not used for prediction. | Measured: groups alone give 0 of 90 correct, and pooling them lowers top-1 from 0.722 to 0.311. Their "transitions" are sort order. Chosen after seeing results on these 24 incidents; disclosed. |
+| R6 | Markov order 2 with back-off; a 2-step context needs 2 occurrences; "ended there" is a counted outcome. | Simple and explainable. The reviewer's sensitivity check found the chosen setting is not the best cell. |
+| R7 | Historical ids are `HIST-C01…` (hand-written) and `HIST-G0016` style (MITRE group id). | Stable when records are added (review). Contract 4 only fixes the field, not the format. |
+| R8 | Patterns A and C are one family in held-out evaluation. | A's reference is a prefix of C's; holding out one leaks the other (review). |
+| R9 | One reviewer pass covered M4 and M5 together, with separate findings. | They share files and results; the review was run with nothing else in flight. |
+| R10 | The similarity measure was not changed to be prefix-aware. | Changing the measure after seeing the 34-of-66 result would be tuning on the test data. It is reported and listed as next work. |
