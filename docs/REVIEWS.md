@@ -372,3 +372,50 @@ What passed: the service starts both ways (`uvicorn api.main:app` from `backend/
 | 9 | Fixed: tests use an unused address range and cover upsert, bad input (16 cases), rollback, token, non-`evt-` ids. |
 | Nits | Edge de-duplication, empty strings, 404 text and record labels fixed. **TODO:** single-process lock; `/docs` CDN. |
 
+---
+
+## M9 — real-data validation (and the contract-1 change)
+
+The reviewer re-ran the adapter in memory on all seven datasets and reproduced every count and the mapper score exactly (354,229 raw, 213,818 adapted, 202,193 process-access events, 1,981 `lsass.exe` targets, TP 20 / FP 30 / FN 25, and the composed-timeline incident counts by an independent implementation). It confirmed the contract change leaves both generator profiles otherwise identical, and that the adapter invents nothing beyond the disclosed derivations (host address, event ids). The problems were in what the document claimed about the numbers.
+
+### Blocking
+
+- **B1. Stale or mismatched synthetic numbers in the side-by-side.** "9 / 24 exact" predated the contract change (now 8); "trajectory length 4–6" was the length of the hand-written historical sequences, not pipeline trajectories (1–8); "similarity 1.000" and "top-1 0.722" were ground-truth figures set against real pipeline figures. The PROGRESS summary carried the same stale figures.
+- **B2. The single T1041 hit rested on a byte count Zeek did not observe.** The one accepted record had one sender packet and `missed_bytes` equal to the whole 26.3 MB: a sequence-gap estimate. The capture was as one-sided there as everywhere else, so "1 of 6" was a capture accident.
+- **B3. The "false positives" and the long trajectories are mostly the capture teardown, and the document did not say so.** 252 of 288 process-rule hits (87%) descend from `netsh trace stop`; 21 of the 30 unlabelled pairs come only from that subtree. Two mappings are wrong in meaning (`wevtutil epl` is an export; `certutil -store` is not ingress transfer). The document's explanation steered towards "real but unlabelled attack activity". The 0.400 headline should stay; the explanation needed correcting and a teardown-excluded figure added as a labelled secondary row.
+- **B4. Statements the data contradicts.** The 19-hour clock offset holds for five datasets, 7 hours in two; Security 4663 is 24 events, not "hundreds"; the PowerShell count includes ids beyond the five listed; apt29 does have technique ids (in description cells, old numbering) and ordered steps; apt3 has a technique-id column; total not adapted is 140,411 (39.6%).
+
+### Should-fix
+
+1. Rule-fitting disclosure incomplete: `procdump64.exe` was added and occurs in the data. (With pre-M9 rules the score is P 0.630, R 0.378, F1 0.472: the additions lowered F1, so no sign of tuning.)
+2. The T1608.001 exclusion is attributed to the metadata, which only covers T1587.001.
+3. Unused ground truth: each metadata file has an ordered transcript of the attacker's commands.
+4. The composed-timeline result is fragile: the merging link is a 29.6-minute gap under a 30-minute window; "kept whole" has a ceiling of 6 of 7.
+5. Event types that could have been considered are not listed (4688, 4672/4703, 4656, Sysmon 22, 17/18, 5156/5158; the 80 dropped service logons).
+6. Prediction wording overstates the fallback (3 of 7 datasets, not "usually").
+7. `agents/contracts.py`: the new fields should be `NotRequired`.
+8. `IP.internal` is inverted on the real graph (bank prefix).
+
+### Nits
+
+- RSTRH is also one-sided; duplicate 4-tuples are summed; lost-counter vs adapted network counts differ by 17; "under a minute" is not in the captured output; new `action` and `source` values are not mentioned; `.gitignore` lists `data/external/` three times.
+
+### Reviewer verdict
+
+The validation establishes that the adapter is faithful, that the contract was not bent to fit the data, that the headline numbers reproduce, and that the central conclusion holds: in all seven datasets a non-system process opens `lsass.exe` and contract 1 discards the one field that shows it. It does not establish anything about exfiltration detection, about what real noise looks like, or anything robust about incident separation.
+
+### Resolution
+
+| Finding | Status |
+|---|---|
+| B1 | **Fixed.** The side-by-side now compares pipeline output with pipeline output only, each cell re-read from the current results files; the PROGRESS summary was rewritten. |
+| B2 | **Fixed, taking the lower number.** `byte_count` now also requires Zeek to report no missed bytes. T1041 is 0 of 6; the headline moved from F1 0.421 to **0.404** (P 0.388, R 0.422). The old figure and the reason are stated in the document. |
+| B3 | **Fixed.** The evaluation computes the capture-teardown subtree from raw process lineage (returned beside the adapted events, never inside them) and prints a labelled secondary row (P 0.679, R 0.422, F1 0.521). The document explains the false positives as capture tooling, names the two wrong mappings, and keeps 0.388 as the headline precision. |
+| B4 | **Fixed**: each statement corrected against the data. apt29 was then used for the time-boxed retry. |
+| 1, 2, 3, 5, 6, 8 | Fixed in `docs/real-data.md` (disclosures, wording, the table of event types considered, the unused transcript, the graph caveat); the 59-pair score is printed. |
+| 4 | Fixed: an offset sweep is printed and the fragility stated; the ceiling is stated. |
+| 7 | Fixed. |
+| Nits | RSTRH, counts, timing claim and new values addressed in the document. **TODO:** `.gitignore` duplicates (not my lines); duplicate 4-tuple summing. |
+
+The apt29 retry (`data/adapters/apt29.py`, `evaluation/real_data_apt29.py`) was written while this review was running and was **not** covered by it. It reuses the reviewed adapter's mapping rules; its numbers are in `evaluation/results/m9_real_data_apt29.txt`.
+

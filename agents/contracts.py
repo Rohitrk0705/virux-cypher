@@ -1,6 +1,6 @@
 """The five frozen data contracts (docs/data-contracts.md) as Python types."""
 
-from typing import TypedDict
+from typing import NotRequired, TypedDict
 
 
 class NormalizedEvent(TypedDict):
@@ -13,8 +13,8 @@ class NormalizedEvent(TypedDict):
     device: str
     action: str
     process: str | None
-    destination_port: int | None   # optional: may be absent, treat as None
-    byte_count: int | None         # optional: bytes sent from source to destination
+    destination_port: NotRequired[int | None]   # optional: may be absent, treat as None
+    byte_count: NotRequired[int | None]         # optional: bytes sent from source to destination
 
 
 class AttackTechnique(TypedDict):

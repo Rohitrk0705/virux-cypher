@@ -25,12 +25,13 @@ probabilities.
 """
 
 import json
+import re
 from bisect import bisect_left, bisect_right
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 
-from . import environment as env
+from .environment import BANK
 
 ROOT = Path(__file__).resolve().parent.parent
 TECHNIQUES_FILE = ROOT / "data" / "mitre" / "techniques.json"
@@ -65,7 +66,36 @@ PROCESS_RULES = {
     "schtasks.exe": ("T1053.005", "Persistence", 0.75),
     "wevtutil.exe": ("T1685.005", "Defense Impairment", 0.80),
     "7z.exe": ("T1560.001", "Collection", 0.70),
+    # Standard Windows tools seen in real telemetry (added for M9 from general ATT&CK
+    # knowledge of what each tool is for; several are ambiguous and carry low confidence).
+    "procdump64.exe": ("T1003.001", "Credential Access", 0.85),
+    "mimikatz.exe": ("T1003.001", "Credential Access", 0.90),
+    "tasklist.exe": ("T1057", "Discovery", 0.70),
+    "reg.exe": ("T1012", "Discovery", 0.40),
+    "ipconfig.exe": ("T1016", "Discovery", 0.70),
+    "route.exe": ("T1016", "Discovery", 0.50),
+    "arp.exe": ("T1016", "Discovery", 0.60),
+    "netsh.exe": ("T1016", "Discovery", 0.35),
+    "hostname.exe": ("T1082", "Discovery", 0.60),
+    "quser.exe": ("T1033", "Discovery", 0.70),
+    "net.exe": ("T1087", "Discovery", 0.40),
+    "net1.exe": ("T1087", "Discovery", 0.40),
+    "nltest.exe": ("T1482", "Discovery", 0.70),
+    "gpresult.exe": ("T1615", "Discovery", 0.60),
+    "ping.exe": ("T1018", "Discovery", 0.30),
+    "wmic.exe": ("T1047", "Execution", 0.60),
+    "cscript.exe": ("T1059.005", "Execution", 0.55),
+    "wscript.exe": ("T1059.005", "Execution", 0.55),
+    "mshta.exe": ("T1218.005", "Stealth", 0.70),
+    "regsvr32.exe": ("T1218.010", "Stealth", 0.60),
+    "certutil.exe": ("T1105", "Command and Control", 0.40),
+    "bitsadmin.exe": ("T1197", "Persistence", 0.60),
+    "sc.exe": ("T1543.003", "Persistence", 0.40),
 }
+
+# A program whose name ends in a document or picture extension followed by an
+# executable one ("invoice.pdf.exe"): a file made to look like a document.
+DOUBLE_EXTENSION = re.compile(r"\.(pdf|docx?|xlsx?|pptx?|txt|rtf|jpe?g|png|gif|bmp|zip|csv)\.(exe|scr|com|pif|bat|cmd)$")
 
 RULES_DOC = [
     ("T1110", "logon_failure inside a burst: >= 5 failures from one source address to one host within 10 minutes"),
@@ -81,7 +111,10 @@ RULES_DOC = [
               "hour), the port is not a common outbound port, it is outside business hours, or the source is a "
               "server (T1041-volume). When the source does not record byte_count the rule falls back to: new "
               "destination from a server (T1041-server) or outside business hours (T1041-offhours)."),
-    ("(process table)", "process_execution of a dual-use tool outside an expected administrator or service session: "
+    ("T1204.002 (b)", "process_execution of a program whose name has a document or picture extension before the "
+                      "executable one, e.g. report.pdf.exe (added for M9)"),
+    ("(process table)", "process_execution of a dual-use tool outside an expected administrator or service session, "
+                        "and not by a built-in system account: "
                         + ", ".join(f"{p} -> {t[0]}" for p, t in PROCESS_RULES.items())),
 ]
 
@@ -97,7 +130,8 @@ def epoch(timestamp):
 
 
 class AttackMapper:
-    def __init__(self, techniques_file=TECHNIQUES_FILE):
+    def __init__(self, techniques_file=TECHNIQUES_FILE, environment=BANK):
+        self.env = environment
         self.attack = json.loads(Path(techniques_file).read_text())
         for technique, tactic, _ in PROCESS_RULES.values():
             self._check(technique, tactic)
@@ -139,8 +173,7 @@ class AttackMapper:
                     members.add(e["event_id"])
         return members
 
-    @staticmethod
-    def _expected_session(event, origin):
+    def _expected_session(self, event, origin):
         """True when the acting account is an administrator or service account
         working from where it is supposed to. origin is the source address of
         the account's current session on this host (set by a logon or remote
@@ -148,7 +181,7 @@ class AttackMapper:
         Known gap: one session per (user, host); if an attacker and the real
         administrator are on the same host at once, the later logon wins."""
         user, device = event["user"], event["device"]
-        for accounts in (env.ADMIN_WORKSTATIONS, env.SERVICE_ACCOUNTS):
+        for accounts in (self.env.admin_workstations, self.env.service_accounts):
             home = accounts.get(user)
             if home is None:
                 continue
@@ -164,6 +197,7 @@ class AttackMapper:
 
     def map_with_rules(self, events):
         """Returns (contract-2 records, {event_id: name of the rule that fired})."""
+        env = self.env
         events = sorted(({**e, "_ts": epoch(e["timestamp"]), "_proc": process_name(e)} for e in events),
                         key=lambda e: (e["_ts"], e["event_id"]))
         bursts = self._burst_members(events)
@@ -235,14 +269,14 @@ class AttackMapper:
                         if size >= LARGE_UPLOAD_BYTES and (
                                 new_destination
                                 or (port is not None and port not in COMMON_OUTBOUND_PORTS)
-                                or not env.business_hours(ts)
-                                or e["device"] in env.SERVERS):
+                                or not env.in_business_hours(ts)
+                                or e["device"] in env.servers):
                             hit, rule = ("T1041", "Exfiltration", 0.65), "T1041-volume"
                     elif new_destination:
                         # volume not recorded by the source: fall back to weaker signals
-                        if e["device"] in env.SERVERS:
+                        if e["device"] in env.servers:
                             hit, rule = ("T1041", "Exfiltration", 0.50), "T1041-server"
-                        elif not env.business_hours(ts):
+                        elif not env.in_business_hours(ts):
                             hit, rule = ("T1041", "Exfiltration", 0.45), "T1041-offhours"
             elif action == "process_execution":
                 if process in OFFICE_APPS:
@@ -253,7 +287,9 @@ class AttackMapper:
                             out[recent[-1]["event_id"]] = self._record(
                                 recent[-1], "T1566.001", "Initial Access", 0.45)
                             rules[recent[-1]["event_id"]] = "T1566.001"
-                elif process in PROCESS_RULES and not expected:
+                elif process and DOUBLE_EXTENSION.search(process):
+                    hit, rule = ("T1204.002", "Execution", 0.60), "T1204.002-double-extension"
+                elif process in PROCESS_RULES and not expected and e["user"] not in env.system_accounts:
                     hit, rule = PROCESS_RULES[process], f"process:{process}"
 
             if hit:

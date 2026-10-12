@@ -382,3 +382,46 @@ Effect of the new exfiltration rule (at least 20 MB sent externally, plus one un
 Before: `evaluation/results/m3_mapper_v2_noisy.txt`. After: `evaluation/results/m3_mapper.txt`.
 
 Downstream on seed 42: ground-truth results are unchanged. The label-free pipeline now infers 51 incidents (20 with no attack, was 53 and 22), reproduces 5 / 24 trajectories end to end (unchanged), and E3 on pipeline trajectories is 14 / 24 (was 13 / 24). The 20 MB threshold and the generator's byte counts were chosen by the same author, so this gain is not evidence about real traffic.
+
+## M9 — real-data validation — done
+
+Full write-up: `docs/real-data.md`. Results: `evaluation/results/m9_real_data.txt`, `m9_real_data_apt29.txt`. Code: `data/adapters/otrf.py`, `data/adapters/apt29.py`, `data/adapters/survey.py`, `evaluation/real_data_eval.py`, `evaluation/real_data_apt29.py`, `core/environment.py`, and 23 tool rules plus one file-name rule in `core/attack_mapper.py`.
+
+> **Headline future-work finding.** Contract 1 must carry process lineage (parent process, command line) and process-access targets to represent host-level behavioural techniques; without them, endpoint credential-access attacks are invisible after normalization. The contract was deliberately not expanded in this milestone.
+
+Data: seven OTRF LSASS-dumping captures (MIT licence), 354,229 raw events, one Windows host each, 10–14 minutes each. **Labels are per dataset, not per event, and unordered.** The synthetic benchmark is unchanged and remains the controlled benchmark.
+
+| What | Real data (7 LSASS datasets) | Synthetic, pipeline output |
+|---|---|---|
+| Events representable in contract 1 | 213,818 of 354,229; 202,193 of those are process-access events that lost their target | all |
+| **Mapper, technique set per dataset** | **precision 0.388, recall 0.422, F1 0.404** (45 labelled pairs) | F1 0.882 on the same set measure (n = 1) |
+| Mapper per event | cannot be measured (no event labels) | F1 0.706 mean over 13 seeds |
+| The technique every dataset is about (T1003.001) | found in **1 of 7** | – |
+| Exfiltration (T1041) | 0 of 6; no outbound byte count was actually measured by the capture | recall 0.933 |
+| Incidents kept apart, 30-minute window | 2 of 7 captures in a composed timeline; fragile to placement | 8 of 24 reproduced exactly |
+| Pipeline trajectory length | 4–116 steps | 1–8 steps |
+| Best historical similarity | 0.20–0.25, always a MITRE group record | 1.0 for 3 of 51 inferred incidents |
+| Prediction | cannot be scored (labels have no order); outputs are generic | strict end-to-end top-1 0.367 |
+
+Corrected after review: the first version reported F1 0.421 and T1041 in 1 of 6. That one hit rested on a byte count Zeek had estimated from a sequence gap, not observed; with it removed the figure is 0.404.
+
+**What the false positives are.** 252 of the 288 mapped events (87%) come from the operator stopping the packet capture at the end of each recording, which makes Windows run a diagnostic script under the attacker's account. Without that activity precision would be 0.679 (F1 0.521), but the pipeline cannot tell it apart, so 0.388 stays the headline. Either way this data says little about normal background noise.
+
+**Multi-step retry (time-boxed, one dataset).** `apt29` day 1: four hosts, a 25-step emulated intrusion, 196,081 events. It validated **worse**, not better: 1 of 31 labelled techniques found (F1 0.057 exact, 0.125 at parent level), a 5-step trajectory against a 45-step plan. The intrusion happens inside PowerShell sessions, whose content contract 1 cannot hold. One thing did work: the single inferred incident spans two hosts through the shared account. As instructed, work stopped there; the LSASS figures stay as the real-data result. The retry was not separately reviewed.
+
+What works: the adapter, graph load, the mapper on techniques that are a program name (T1082 7/7, T1033 7/7), cross-host grouping by account.
+
+What degrades: trajectories (capture teardown; alternating techniques defeat the collapse of repeats); hub suppression (every host counts as shared infrastructure because of built-in system accounts).
+
+What breaks: any technique that is a behaviour rather than a program name; historical matching; prediction; incident separation when one account is active on several hosts within the window.
+
+What real data could not tell us: per-event accuracy, anything about order, false-alarm rate under normal use, exfiltration detection, and anything about the synthetic attack patterns (valid accounts, brute force, lateral movement and collection do not occur in the LSASS datasets).
+
+Review: 4 Blocking (all fixed; one lowered the headline), 8 Should-fix (all addressed).
+
+TODOs carried forward:
+- **Extend contract 1** with parent process, command line and process-access target (the headline finding), then redo this milestone.
+- Hub suppression should not count built-in system accounts as users.
+- The graph's `IP.internal` flag uses the bank's prefix whatever dataset is loaded.
+- Use the ordered command transcript in each LSASS metadata file as an order label.
+- Map the 13 unmatched apt29 technique names with MITRE's published crosswalk.

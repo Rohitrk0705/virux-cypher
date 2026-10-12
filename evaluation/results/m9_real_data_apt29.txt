@@ -1,0 +1,44 @@
+=== apt29 day 1: adapter ===
+raw events 196081, adapted 18977 (9.7%); hosts {'SCRANTON': 15508, 'NASHUA': 2335, 'NEWYORK': 1100, 'UTICA': 34}
+adapted by action: {'process_access': 15555, 'file_create': 1275, 'network_connection': 1229, 'process_execution': 446, 'logoff': 237, 'network_logon': 218, 'logon_success': 15, 'rdp_session': 2}
+dropped: {'no contract-1 representation for this event type': 152939, 'required field could not be mapped: user': 24103, 'service, batch or system logon (not a user session)': 62}
+lost: {'process-access events whose target process was dropped': 39283, 'file creations whose file name was dropped': 1649, 'process creations whose command line and parent process were dropped': 447, '... of which the target was lsass.exe': 326}
+time range 2020-05-02T02:55:28Z .. 2020-05-02T03:28:13Z; host addresses {'NASHUA': '10.0.1.6', 'SCRANTON': '10.0.1.4', 'NEWYORK': '10.0.0.4', 'UTICA': '10.0.1.5'}
+
+=== labels from the emulation plan ===
+25 plan steps; 31 distinct technique ids matched by exact current ATT&CK name; 13 technique names had no exact match and are left out:
+  Command-Line Interface, Commonly Used Port, Credential Dumping, Data Compressed, Data Encrypted, Execution through API, Exfiltration Over Command and Control Channel, New Service, Remote File Copy, Standard Application Layer Protocol, Standard Cryptographic Protocol, Uncommonly Used Port, Windows Admin Shares
+plan order (ids only): 1.A: T1204 T1036 | 1.B: T1059.001 | 2.A: T1083 T1119 T1005 T1074 | 2.B: - | 3.A: T1027 | 3.B: T1546.015 T1548.002 | 3.C: T1112 | 4.A: T1059.001 T1140 | 4.B: T1057 T1070.004 | 4.C: T1083 T1033 T1082 T1016 T1057 T1518.001 T1069 | 5.A: - | 5.B: T1547.001 | 6.A: T1552.001 T1036 | 6.B: T1552.004 | 6.C: - | 7.A: T1113 T1115 T1056 | 7.B: T1005 T1048 | 8.A: T1018 T1021.006 T1057 | 8.B: T1027.002 | 8.C: T1569.002 T1078 | 9.A: - | 9.B: T1059.001 T1083 T1119 T1005 T1074 | 9.C: T1070.004 | 10.A: T1569.002 T1547.001 | 10.B: T1547.001
+
+=== rule-based mapper vs the plan's technique set (1 dataset) ===
+rules frozen before this dataset (THE RESULT):
+  events mapped 24; techniques reported 4, labelled 31
+  exact ids:    precision 0.250 recall 0.032 f1 0.057   found: T1059.001
+  parent level: precision 0.667 recall 0.069 f1 0.125   found: T1021 T1059
+  labelled but not reported (parent level): T1005 T1016 T1018 T1027 T1033 T1036 T1048 T1056 T1057 T1069 T1070 T1074 T1078 T1082 T1083 T1112 T1113 T1115 T1119 T1140 T1204 T1518 T1546 T1547 T1548 T1552 T1569
+  reported but not labelled (parent level): T1218
+  events per rule: process:powershell.exe 12, process:rundll32.exe 6, process:cmd.exe 4, T1021.001 2
++ 5 tool rules written after seeing it:
+  events mapped 35; techniques reported 7, labelled 31
+  exact ids:    precision 0.429 recall 0.097 f1 0.158   found: T1059.001 T1070.004 T1569.002
+  parent level: precision 0.667 recall 0.138 f1 0.229   found: T1021 T1059 T1070 T1569
+  labelled but not reported (parent level): T1005 T1016 T1018 T1027 T1033 T1036 T1048 T1056 T1057 T1069 T1074 T1078 T1082 T1083 T1112 T1113 T1115 T1119 T1140 T1204 T1518 T1546 T1547 T1548 T1552
+  reported but not labelled (parent level): T1218 T1560
+  events per rule: process:powershell.exe 12, process:sdelete64.exe 6, process:rundll32.exe 6, process:cmd.exe 4, process:psexec64.exe 4, T1021.001 2, process:rar.exe 1
+
+=== full pipeline (frozen rules) ===
+graph: 19205 nodes / 76825 relationships
+plan as a parent-technique sequence (45 steps): T1204 > T1036 > T1059 > T1083 > T1119 > T1005 > T1074 > T1027 > T1546 > T1548 > T1112 > T1059 > T1140 > T1057 > T1070 > T1083 > T1033 > T1082 > T1016 > T1057 > T1518 > T1069 > T1547 > T1552 > T1036 > T1552 > T1113 > T1115 > T1056 > T1005 > T1048 > T1018 > T1021 > T1057 > T1027 > T1569 > T1078 > T1059 > T1083 > T1119 > T1005 > T1074 > T1070 > T1569 > T1547
+window   5 min: 2 incident(s); events per incident [17, 7]
+window  15 min: 1 incident(s); events per incident [24]
+window  30 min: 1 incident(s); events per incident [24]
+window  60 min: 1 incident(s); events per incident [24]
+incident INC-a29-000010 (window 30 min): 24 events; hosts {'SCRANTON': 21, 'NASHUA': 3}; accounts {'pbeesly': 24}
+  trajectory (5 parent-level steps): T1059 > T1218 > T1059 > T1021 > T1059
+  against the plan: technique overlap (Jaccard) 0.067; order similarity (1 - edit distance / longer) 0.089; 2 of 29 labelled parent techniques present
+  top historical match: HIST-C01 similarity 0.3
+  predicted next: T1068 p=0.286  [the last 1 step(s) T1059 occur 7 time(s) in 7 of 11 hand-specified historical trajectories]
+hosts and addresses treated as shared infrastructure: NASHUA, NEWYORK, SCRANTON, 10.0.0.4, 10.0.1.4, 10.0.1.5, 10.0.1.6
+
+The Neo4j graph now holds this dataset. Restore the synthetic benchmark with:
+  python -m knowledge_graph.build --reset

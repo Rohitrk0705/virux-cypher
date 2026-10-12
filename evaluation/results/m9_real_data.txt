@@ -1,0 +1,166 @@
+=== 1. adapter: real events -> contract 1 ===
+dataset                  raw  adapted  kept % proc exec  network proc access file create logon/off  lsass target lost bytes known
+LSASS_campaign_01      53698    31101   57.9%       269      136       30414         279         3                271           0
+LSASS_campaign_02      42482    27149   63.9%       138      135       26468         408         0                281           0
+LSASS_campaign_03      41954    30573   72.9%       127      159       30074         208         5                295           0
+LSASS_campaign_04      40568    23741   58.5%       104      120       22871         646         0                258           0
+LSASS_campaign_05      59707    34248   57.4%       122      882       30619        2622         3                282           0
+LSASS_campaign_06      58096    34503   59.4%        77      771       31522        2130         3                293           0
+LSASS_campaign_07      57724    32503   56.3%       111      543       30225        1621         3                301           0
+
+event types with no contract-1 representation, all datasets (140313 of 354229 raw events). Top ten:
+  Microsoft-Windows-Sysmon/Operational:7                           72032
+  Microsoft-Windows-Sysmon/Operational:12                          20166
+  Microsoft-Windows-Sysmon/Operational:13                          13591
+  Microsoft-Windows-PowerShell/Operational:4105                     5028
+  Microsoft-Windows-PowerShell/Operational:4106                     5024
+  Security:5379                                                     4120
+  Microsoft-Windows-Sysmon/Operational:18                           2595
+  Windows PowerShell:800                                            1846
+  Microsoft-Windows-PowerShell/Operational:4103                     1824
+  Security:4673                                                     1605
+
+=== 2. rule-based mapper vs the datasets' own ATT&CK labels (technique SETS per dataset) ===
+dataset              labelled reported  tp  fp  fn   prec  recall     f1  events mapped  found | missed | reported but not labelled
+LSASS_campaign_01           7       11   3   8   4  0.273   0.429  0.333            138  T1033 T1057 T1082 | T1003.001 T1055.002 T1134.001 T1204.002 | T1012 T1016 T1059.003 T1059.005 T1105 T1218.011 T1615 T1685.005
+LSASS_campaign_02           6       10   4   6   2  0.400   0.667  0.500             48  T1003.001 T1033 T1082 T1204.002 | T1041 T1105 | T1012 T1016 T1057 T1059.003 T1059.005 T1615
+LSASS_campaign_03           8        8   3   5   5  0.375   0.375  0.375             45  T1033 T1057 T1082 | T1003.001 T1041 T1055.002 T1204.002 T1543.003 | T1012 T1016 T1059.003 T1059.005 T1615
+LSASS_campaign_04           5        5   2   3   3  0.400   0.400  0.400              7  T1033 T1082 | T1003.001 T1041 T1204.002 | T1059.003 T1087 T1218.011
+LSASS_campaign_05           7        7   3   4   4  0.429   0.429  0.429             40  T1012 T1033 T1082 | T1003.001 T1041 T1105 T1204.002 | T1016 T1059.003 T1059.005 T1615
+LSASS_campaign_06           6        4   2   2   4  0.500   0.333  0.400              5  T1033 T1082 | T1003.001 T1041 T1105 T1204.002 | T1016 T1059.003
+LSASS_campaign_07           6        4   2   2   4  0.500   0.333  0.400              5  T1033 T1082 | T1003.001 T1041 T1105 T1204.002 | T1016 T1059.003
+ALL (micro)                45       49  19  30  26  0.388   0.422  0.404            288
+sample: 7 datasets, 45 labelled (dataset, technique) pairs. THIS IS THE HEADLINE.
+
+secondary, capture teardown left out: 252 of 288 mapped events descend from the operator's 'trace stop' command. Without them: reported 28, tp 19, fp 9, fn 26; precision 0.679 recall 0.422 f1 0.521. (Uses raw process lineage that the pipeline does not have.)
+secondary, Resource Development labels left in (59 pairs): precision 0.388 recall 0.322 f1 0.352.
+
+per labelled technique: datasets in which the mapper reported it / datasets labelled with it
+  T1003.001  1 / 7
+  T1033      7 / 7
+  T1082      7 / 7
+  T1204.002  1 / 7
+  T1041      0 / 6
+  T1105      0 / 4
+  T1055.002  0 / 2
+  T1057      2 / 2
+  T1012      1 / 1
+  T1134.001  0 / 1
+  T1543.003  0 / 1
+
+which rule produced the mapped events (all datasets):
+  process:cmd.exe                      141
+  process:reg.exe                       61
+  process:netsh.exe                     22
+  process:whoami.exe                    14
+  process:wevtutil.exe                  14
+  process:systeminfo.exe                10
+  process:certutil.exe                   5
+  process:tasklist.exe                   4
+  process:cscript.exe                    4
+  process:gpresult.exe                   4
+  process:rundll32.exe                   2
+  process:ipconfig.exe                   1
+  process:route.exe                      1
+  T1204.002-double-extension             1
+  process:procdump.exe                   1
+  process:procdump64.exe                 1
+  process:net.exe                        1
+  process:net1.exe                       1
+
+=== 3. full pipeline per dataset (graph -> incidents -> trajectory -> match -> predict), window 30 min ===
+
+LSASS_campaign_01: 31101 events, 138 mapped, graph 31179 nodes / 124959 relationships, 1 incident(s)
+  INC-l01-005203: 137 events, 116 trajectory steps; 132 of the events descend from the capture-stop command
+    trajectory: T1059.003 > T1082 > T1033 > T1057 > T1016 > T1059.005 > T1059.003 > T1012 > T1615 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1082 > T1059.003 > T1057 > T1059.003 > T1685.005 > T1059.003 > T1685.005 > T1059.003 > T1685.005 > T1059.003 > T1685.005 > T1059.003 > T1685.005 > T1059.003 > T1685.005 > T1059.003 > T1016 > T1059.003 > T1016 > T1059.003 > T1016 > T1059.003 > T1016 > T1059.003 > T1016 > T1059.003 > T1016 > T1059.003 > T1016 > T1059.003 > T1016 > T1059.003 > T1016 > T1059.003 > T1016 > T1059.003 > T1105 > T1059.003 > T1105 > T1059.003 > T1105 > T1059.003 > T1105 > T1059.003 > T1105 > T1059.003 > T1016 > T1059.003 > T1016 > T1059.003 > T1016 > T1059.003 > T1016 > T1059.003 > T1016 > T1059.003 > T1016 > T1059.003 > T1016 > T1059.003 > T1016 > T1059.003 > T1685.005 > T1059.003 > T1685.005 > T1059.003 > T1685.005 > T1059.003 > T1685.005 > T1059.003 > T1685.005 > T1059.003 > T1685.005 > T1059.003 > T1685.005 > T1059.003 > T1685.005 > T1059.003
+    labelled techniques in the trajectory: 3 of 7; steps whose technique is not in the labels: 111 of 116
+    top historical match: HIST-G0038 similarity 0.201
+    predicted next: T1068 p=0.286  [the last 1 step(s) T1059 occur 7 time(s) in 7 of 11 hand-specified historical trajectories]
+
+LSASS_campaign_02: 27149 events, 48 mapped, graph 27219 nodes / 108884 relationships, 1 incident(s)
+  INC-l02-003936: 48 events, 42 trajectory steps; 41 of the events descend from the capture-stop command
+    trajectory: T1204.002 > T1059.003 > T1082 > T1033 > T1003.001 > T1016 > T1059.005 > T1059.003 > T1012 > T1615 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1082 > T1059.003 > T1057
+    labelled techniques in the trajectory: 4 of 6; steps whose technique is not in the labels: 37 of 42
+    top historical match: HIST-G0038 similarity 0.212
+    predicted next: T1059 p=0.163  [the last step T1057 does not occur in any of the 11 hand-specified historical trajectories]
+
+LSASS_campaign_03: 30573 events, 45 mapped, graph 30641 nodes / 122588 relationships, 1 incident(s)
+  INC-l03-005166: 45 events, 40 trajectory steps; 40 of the events descend from the capture-stop command
+    trajectory: T1059.003 > T1082 > T1033 > T1057 > T1016 > T1059.005 > T1059.003 > T1012 > T1615 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1082 > T1059.003
+    labelled techniques in the trajectory: 3 of 8; steps whose technique is not in the labels: 36 of 40
+    top historical match: HIST-G0038 similarity 0.24
+    predicted next: T1068 p=0.286  [the last 1 step(s) T1059 occur 7 time(s) in 7 of 11 hand-specified historical trajectories]
+
+LSASS_campaign_04: 23741 events, 7 mapped, graph 23812 nodes / 95109 relationships, 1 incident(s)
+  INC-l04-005610: 7 events, 5 trajectory steps; 2 of the events descend from the capture-stop command
+    trajectory: T1059.003 > T1082 > T1033 > T1218.011 > T1087
+    labelled techniques in the trajectory: 2 of 5; steps whose technique is not in the labels: 3 of 5
+    top historical match: HIST-G0033 similarity 0.243
+    predicted next: T1558 p=1.0  [the last 1 step(s) T1087 occur 1 time(s) in 1 of 11 hand-specified historical trajectories]
+
+LSASS_campaign_05: 34248 events, 40 mapped, graph 34312 nodes / 137997 relationships, 1 incident(s)
+  INC-l05-009432: 40 events, 38 trajectory steps; 35 of the events descend from the capture-stop command
+    trajectory: T1059.003 > T1082 > T1033 > T1012 > T1016 > T1059.005 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1615 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003 > T1012 > T1059.003
+    labelled techniques in the trajectory: 3 of 7; steps whose technique is not in the labels: 20 of 38
+    top historical match: HIST-G0038 similarity 0.206
+    predicted next: T1068 p=0.286  [the last 1 step(s) T1059 occur 7 time(s) in 7 of 11 hand-specified historical trajectories]
+
+LSASS_campaign_06: 34503 events, 5 mapped, graph 34562 nodes / 138798 relationships, 1 incident(s)
+  INC-l06-008723: 5 events, 4 trajectory steps; 1 of the events descend from the capture-stop command
+    trajectory: T1059.003 > T1082 > T1033 > T1016
+    labelled techniques in the trajectory: 2 of 6; steps whose technique is not in the labels: 2 of 4
+    top historical match: HIST-G0124 similarity 0.254
+    predicted next: T1059 p=0.163  [the last step T1016 does not occur in any of the 11 hand-specified historical trajectories]
+
+LSASS_campaign_07: 32503 events, 5 mapped, graph 32570 nodes / 130570 relationships, 1 incident(s)
+  INC-l07-007674: 5 events, 4 trajectory steps; 1 of the events descend from the capture-stop command
+    trajectory: T1059.003 > T1082 > T1033 > T1016
+    labelled techniques in the trajectory: 2 of 6; steps whose technique is not in the labels: 2 of 4
+    top historical match: HIST-G0124 similarity 0.254
+    predicted next: T1059 p=0.163  [the last step T1016 does not occur in any of the 11 hand-specified historical trajectories]
+
+=== 4. several datasets composed into one timeline: can incidents be told apart? ===
+hosts, users and addresses; only its clock is moved.
+  group A - three different hosts, overlapping:  02 at T0, 03 at T0+3 min, 04 at T0+6 min
+  group B - the same host (MKT01), one after another: 01 at T0+40 min, then 05, 06 and 07
+            starting 5, 20 and 45 minutes after the previous one ends
+composed timeline: 213818 events, 288 mapped; graph 213954 nodes / 858303 relationships
+placement:
+  LSASS_campaign_02   2023-09-10T09:00:00Z .. 2023-09-10T09:06:37Z   host ACCT01; human accounts nora.quemona
+  LSASS_campaign_03   2023-09-10T09:03:00Z .. 2023-09-10T09:10:19Z   host PRD01; human accounts pedro.gustavo, pupy.godoy
+  LSASS_campaign_04   2023-09-10T09:06:00Z .. 2023-09-10T09:11:35Z   host IT01; human accounts pedro.gustavo
+  LSASS_campaign_01   2023-09-10T09:40:00Z .. 2023-09-10T09:46:28Z   host MKT01; human accounts pedro.gustavo, stevie.marie
+  LSASS_campaign_05   2023-09-10T09:51:28Z .. 2023-09-10T09:58:32Z   host MKT01; human accounts stevie.marie, pedro.gustavo
+  LSASS_campaign_06   2023-09-10T10:18:32Z .. 2023-09-10T10:25:49Z   host MKT01; human accounts stevie.marie, pedro.gustavo
+  LSASS_campaign_07   2023-09-10T11:10:49Z .. 2023-09-10T11:17:38Z   host MKT01; human accounts stevie.marie, pedro.gustavo
+
+Reference grouping = the mapped events of each source dataset (there are no per-event attack labels, so 'the incident' is everything the mapper flagged in that capture).
+'kept whole' = an inferred incident equals the dataset's mapped events exactly. Dataset 01 has one mapped event by a second account that can never join an incident, so the ceiling is 6 of 7.
+ W(min) inferred datasets kept whole  mixing 2+ datasets  coverage  purity  pairP  pairR  pairF1
+      5        6              4 / 7                   1     0.856   0.838  0.975  0.989   0.982
+     15        5              3 / 7                   2     0.713   0.663  0.679  0.989   0.805
+     30        3              2 / 7                   1     0.428   0.369  0.432  0.989   0.601
+     60        2              1 / 7                   1     0.285   0.225  0.414  0.989   0.584
+
+incidents at W = 30 min, by source dataset of their events:
+  INC-l03-005166      234 events   dataset 01: 137, dataset 03: 45, dataset 04: 7, dataset 05: 40, dataset 06: 5
+  INC-l02-003936       48 events   dataset 02: 48
+  INC-l07-007674        5 events   dataset 07: 5
+
+sensitivity to the (arbitrary) start of group B, window 30 min:
+  group B starts at T0 + 30 min: 3 incidents, 1 mixing 2+ datasets, largest 234 events
+  group B starts at T0 + 35 min: 3 incidents, 1 mixing 2+ datasets, largest 234 events
+  group B starts at T0 + 40 min: 3 incidents, 1 mixing 2+ datasets, largest 234 events
+  group B starts at T0 + 41 min: 4 incidents, 2 mixing 2+ datasets, largest 182 events
+  group B starts at T0 + 45 min: 4 incidents, 2 mixing 2+ datasets, largest 182 events
+  group B starts at T0 + 50 min: 4 incidents, 2 mixing 2+ datasets, largest 182 events
+  group B starts at T0 + 60 min: 4 incidents, 2 mixing 2+ datasets, largest 182 events
+
+hosts and addresses classed as shared infrastructure (>= 4 users) and ignored for linking: ACCT01, IT01, MKT01, PRD01, 10.0.5.13, 192.168.1.4, 192.168.1.40, 192.168.1.41, 192.168.1.42, 192.168.1.43, 192.168.56.30, 192.168.56.4, 224.0.0.251, 239.255.255.250, ff02:0:0:0:0:0:0:fb
+
+=== 5. the same technique-SET measure on the synthetic benchmark ===
+whole synthetic dataset as one 'dataset' (3986 events): labelled 15 techniques, reported 19; precision 0.789 recall 1.000 f1 0.882 (n = 1 dataset)
+per true incident, over the incident's own (attack) events only: 114 labelled (incident, technique) pairs; precision 0.883 recall 0.860 f1 0.871 (n = 24 incidents). This view cannot see techniques reported on benign events, which the real per-dataset view does include, so it flatters the synthetic side.
+
+The Neo4j graph now holds the composed real timeline. Restore the synthetic benchmark with:
+  python -m knowledge_graph.build --reset
