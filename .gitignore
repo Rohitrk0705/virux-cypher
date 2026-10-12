@@ -19,3 +19,6 @@ docker/neo4j-data/
 
 data/mitre/raw/
 .pytest_cache/
+data/external/
+data/external/
+data/external/
