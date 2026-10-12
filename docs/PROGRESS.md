@@ -200,3 +200,14 @@ E1 does **not** show that history helps on unseen attacks, and says nothing abou
 "Known" scores 1.000 by construction (verbatim copies of references). On ground truth the order-aware score is worse than the order-free one (22 vs 24).
 
 Review: 2 Blocking (both fixed; they were unsupported or missing sentences, not wrong numbers), 7 Should-fix (all fixed).
+
+## M7 — agent tool layer and Agent 2 — done
+
+Built: `agents/tools/` (the five tools, typed against the contracts), `agents/contracts.py` (contracts and the evidence-bundle types), `agents/investigation_agent/` (the tool-calling loop, the offline scripted policy, a Claude adapter). Run: `python -m agents.investigation_agent <incident_id>`.
+
+- The model only chooses which tool to call. Matching and prediction run on the trajectory the graph returned; the bundle is built by code from tool results; the model's text is confined to `agent_notes`.
+- Default is the offline scripted policy (deterministic, no credentials). On the loaded graph it runs on all 53 inferred incidents; 19 reach a prediction.
+- **The Claude adapter has never been run against the real API** (no key, package not installed). It is tested only against a stand-in module.
+- Tests: 26 in `tests/test_agents.py`, including mock models that supply their own trajectory, put a false claim in an extra argument, invent tool names, never stop, flood one turn with calls, or crash mid-run.
+
+Review: 1 Blocking (fixed: model-written strings could reach the step log), 11 Should-fix (all addressed).

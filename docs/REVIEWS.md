@@ -277,3 +277,49 @@ E1 can claim that a Markov model over the 11 hand-written sequences predicts wel
 | S4, S5, S6, S7 | Fixed: caveats and a Metrics paragraph added; counts are computed, not typed. |
 | Nits | Wording fixed; rows are looked up by key. **TODO:** no test ties findings text to tables (the text is generated from the same rows, which limits the risk). |
 
+---
+
+## M7 — agent tool layer and Agent 2
+
+Reviewer verified: the five tools match `docs/agent-tools.md` in name, signature, typing and contract shape and raise `LookupError` for unknown incidents and techniques; the loop follows the Messages tool-use protocol (assistant content first, one `tool_result` per call in a single user message, `is_error` on failures, a `max_steps` exit leaves a valid conversation marked incomplete); `ScriptedLLM` is deterministic and ran cleanly on all 53 real incidents; `trajectory`, `historical_matches`, `prediction` and `event_summary` could not be made to contain anything a tool did not produce (apart from the stale-state case below).
+
+### Blocking
+
+**1. Model-written content reaches the bundle outside `agent_notes`.** `steps[].input` stored the model's raw arguments; extra keys were ignored rather than rejected, so a `predict_next` call carrying `"finding": "attacker WILL use T9999 p=0.99"` was recorded `ok: true` with that text verbatim. `steps[].tool` and `steps[].summary` echoed invented tool names and incident ids the same way. This matters because `/explain` builds a report from the bundle. The existing test did not catch it.
+
+### Should-fix
+
+2. Non-dict tool input raises out of `investigate()`; a non-JSON value breaks `json.dumps(bundle)`; `decide()` returning `None` raises.
+3. Stale state: a later `query_graph` call could overwrite the trajectory while matches and prediction still described the old one.
+4. `complete: True` did not mean evidence was gathered (a model answering "All clear" immediately was "complete").
+5. `ScriptedLLM` wrote false notes after a tool error (for example "no ATT&CK-mapped steps" when `query_graph` had failed).
+6. Any model-chosen technique landed in `bundle["techniques"]` with no marker.
+7. One model turn could trigger unlimited tool calls.
+8. `content=None` with tool calls left an invalid conversation; duplicate call ids produced two results with one id.
+9. Hazards for the API milestone: no `EvidenceBundle` type; `list_incidents()` returned epoch seconds; model or API errors mid-run discarded evidence; the LLM was built before the incident was checked; `toolset={}` silently used the real tools; `event_summary` would fail on a null field.
+10. Undocumented decisions (model-facing tools take `incident_id`; `STRONG_MATCH`; "suspicious"; key technique; `MAX_STEPS`).
+11. "Untested" labelling of the Claude adapter was incomplete, and the adapter had no test. No protocol mistakes found on reading.
+12. Test gaps: errors were tested on `Investigation.run`, not through `investigate()`; several adversarial cases untested.
+
+### Nits
+
+- Incident id parsed by splitting the prompt; mid-run text could become `agent_notes`; `lookup_technique` rejects lower-case ids; no usage line for the entry point; old `LLM_API_KEY` line kept in `.env.example`; `list_incidents` loosely typed.
+
+### Resolution
+
+| Finding | Status |
+|---|---|
+| Blocking 1 | **Fixed.** Every call is validated: known tool name, exactly one string argument, the investigation's own incident id or a well-formed technique id. A rejected call is logged with tool `<unknown>` or its real name, an empty input and a fixed error code. `test_model_strings_never_enter_the_step_log` supplies a trajectory, a lie in an extra argument, an invented tool name and a fake incident id after a real trajectory exists, and checks none of it appears outside `agent_notes`. |
+| 2 | Fixed: validation rejects non-dict input; a non-`Decision` reply stops the run as `invalid_model_response`. |
+| 3 | Fixed: the trajectory and events are fetched once per investigation. |
+| 4 | Fixed: `complete` requires a normal stop and a fetched trajectory; `tool_calls` and `failed_tool_calls` are reported. |
+| 5 | Fixed: notes name the failed tools. |
+| 6 | Fixed: each looked-up technique carries `relation` (`in_trajectory`, `predicted`, `not_in_evidence`). |
+| 7 | Fixed: `MAX_TOOL_CALLS = 20` per investigation. |
+| 8 | Fixed: content is synthesised when missing; one result per distinct call id. |
+| 9 | Fixed: `EvidenceBundle` and related types in `agents/contracts.py`; ISO timestamps; a model failure returns the evidence so far with `stop_reason: model_error`; incident checked first; empty toolset respected; null-safe summary. **Not done:** raw events are not in the bundle (the API serves them separately). |
+| 10 | Fixed: `DECISIONS.md` M7 section. |
+| 11 | Fixed: labelled untested in the module docstring, `default_llm`, the class, the README and `.env.example`; an offline test drives the adapter with a stand-in `anthropic` module. Still never run against the real API. |
+| 12 | Fixed: tests added for each case. |
+| Nits | Done, except the old `LLM_API_KEY` line, which is from the original skeleton and was left. |
+

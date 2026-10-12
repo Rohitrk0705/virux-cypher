@@ -76,3 +76,15 @@ One line each: what was decided and why. Newest milestone last.
 | E3 | "Static graph" means order is not used by the scoring rule (set overlap for matching, co-occurrence for prediction); the stored graph is the same. | The cleanest way to isolate the effect of order with everything else equal. |
 | E4 | E3 classes: known = base instances of A/B/C, variant = their skip/insert instances, novel = pattern D. Thresholds are chosen by leave-one-out. | Uses the generator's variants as you asked; leave-one-out avoids fitting thresholds to the tested incident. |
 | E5 | Findings sentences are generated from the result rows, with fixed wording rules for higher / lower / no different (a one-instance gap is "no different"). | A reviewer found hand-written findings that the tables did not support. |
+
+## M7 — agent tools and Agent 2
+
+| # | Decision | Rationale |
+|---|---|---|
+| T1 | The five tools are plain typed functions in `agents/tools/`, matching `docs/agent-tools.md`. The versions offered to the language model take only an `incident_id` or `technique_id`; `match_historical` and `predict_next` then run on the trajectory `query_graph` returned. | A model that passes its own trajectory could fabricate a finding. This deviates from the tool table only at the model-facing boundary. |
+| T2 | The evidence bundle is assembled by code from tool results. The model's text appears only in `agent_notes`; the step log stores validated arguments and fixed error codes. | "An agent never computes a finding itself", enforced rather than requested. |
+| T3 | Agent 2 runs offline by default with `ScriptedLLM`, a fixed-rule policy following the documented loop. Claude is opt-in with `AGENT_LLM=anthropic`. | No API key is configured; the default must be deterministic and testable. The Claude adapter has never been run against the real API. |
+| T4 | Scripted policy rules: "suspicious" = the trajectory has at least one technique; "strong match" = top similarity ≥ 0.5; the key technique to look up is the top prediction, otherwise the last observed step. | Needed concrete values for the conceptual loop; none are tuned. On the loaded graph 19 of 53 incidents reach a prediction. |
+| T5 | Limits: 8 model turns and 20 tool calls per investigation. | Bounds cost and Neo4j load whatever the model does. |
+| T6 | `lookup_technique` returns all tactics of a technique as one comma-separated string and resolves revoked ids. | The tool contract has a single `tactic` field; several techniques have more than one tactic. |
+| T7 | The Claude adapter uses model `claude-opus-5-5` with default thinking and effort, and does not enable server-side refusal fallbacks. | Could not be verified without credentials, so only the plain documented call is used. Worth revisiting when a key is available. |
