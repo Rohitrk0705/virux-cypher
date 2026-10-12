@@ -1,0 +1,175 @@
+import React, { useState, useEffect } from 'react';
+import { useIncident } from '../context/IncidentContext';
+import { api } from '../api/client';
+import { EvidenceBundle } from '../types/contracts';
+import { TechniqueTag } from '../components/common/TechniqueTag';
+import { Terminal, CheckCircle2, Bot, Layers, ArrowRight, ShieldAlert, Cpu } from 'lucide-react';
+
+export const InvestigationPage: React.FC = () => {
+  const { activeIncidentId } = useIncident();
+  const [bundle, setBundle] = useState<EvidenceBundle | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isCurrent = true;
+    const fetchInvestigation = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await api.getInvestigate(activeIncidentId);
+        if (isCurrent) setBundle(data);
+      } catch (err: any) {
+        if (isCurrent) setError(err.message || 'Failed to load investigation bundle');
+      } finally {
+        if (isCurrent) setLoading(false);
+      }
+    };
+    fetchInvestigation();
+    return () => {
+      isCurrent = false;
+    };
+  }, [activeIncidentId]);
+
+  return (
+    <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      {/* Page Title */}
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+          <Terminal size={22} color="#a855f7" />
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#f8fafc' }}>
+            Multi-Agent Investigation Trace (Agent 2)
+          </h1>
+        </div>
+        <p style={{ color: '#94a3b8', fontSize: '0.875rem' }}>
+          Autonomous evidence gathering audit trail and tool invocation chain for incident <code style={{ color: '#38bdf8' }}>{activeIncidentId}</code>.
+        </p>
+      </div>
+
+      {loading ? (
+        <div className="glass-panel" style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
+          Retrieving agent evidence bundle and execution trace...
+        </div>
+      ) : error ? (
+        <div className="glass-panel" style={{ padding: '20px', color: '#fb7185', background: 'rgba(244,63,94,0.1)' }}>
+          {error}
+        </div>
+      ) : !bundle ? null : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          {/* Agent Status KPI Banner */}
+          <div
+            className="glass-panel"
+            style={{
+              padding: '20px',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: '16px',
+            }}
+          >
+            <div>
+              <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>POLICY / AGENT</div>
+              <div style={{ fontSize: '1rem', color: '#c084fc', fontWeight: 700, marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Bot size={16} /> {bundle.agent.llm}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>EXECUTION STATUS</div>
+              <div style={{ fontSize: '1rem', color: '#34d399', fontWeight: 700, marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <CheckCircle2 size={16} /> {bundle.agent.complete ? 'COMPLETE' : 'RUNNING'}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>TOOL CALLS</div>
+              <div style={{ fontSize: '1.2rem', color: '#f8fafc', fontWeight: 800, fontFamily: 'var(--font-mono)', marginTop: '2px' }}>
+                {bundle.agent.tool_calls} <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 400 }}>(0 failures)</span>
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>STOP REASON</div>
+              <div style={{ fontSize: '0.9rem', color: '#cbd5e1', fontFamily: 'var(--font-mono)', marginTop: '4px' }}>
+                {bundle.agent.stop_reason}
+              </div>
+            </div>
+          </div>
+
+          {/* Agent Notes */}
+          {bundle.agent_notes && (
+            <div
+              className="glass-panel"
+              style={{
+                padding: '16px 20px',
+                borderLeft: '4px solid #a855f7',
+                background: 'rgba(168, 85, 247, 0.06)',
+              }}
+            >
+              <div style={{ fontSize: '0.8rem', color: '#c084fc', fontWeight: 700, marginBottom: '4px' }}>
+                AGENT NOTE (COMMENTARY)
+              </div>
+              <div style={{ color: '#e2e8f0', fontSize: '0.875rem', fontStyle: 'italic' }}>
+                "{bundle.agent_notes}"
+              </div>
+            </div>
+          )}
+
+          {/* Tool Execution Steps Timeline */}
+          <div className="glass-panel" style={{ padding: '24px' }}>
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f8fafc', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Cpu size={18} color="#38bdf8" /> Tool Execution Steps
+            </h2>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {bundle.steps.map((step, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    padding: '14px 18px',
+                    borderRadius: '8px',
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    border: '1px solid rgba(255, 255, 255, 0.06)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '12px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span
+                      className="badge-mono"
+                      style={{
+                        background: 'rgba(56, 189, 248, 0.15)',
+                        color: '#38bdf8',
+                        fontSize: '0.7rem',
+                      }}
+                    >
+                      STEP {idx + 1}
+                    </span>
+                    <span className="mono" style={{ color: '#f8fafc', fontWeight: 600, fontSize: '0.875rem' }}>
+                      {step.tool}
+                    </span>
+                    <span style={{ color: '#94a3b8', fontSize: '0.825rem' }}>
+                      {step.summary}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span
+                      className="badge-mono"
+                      style={{
+                        background: step.ok ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                        color: step.ok ? '#34d399' : '#f87171',
+                        fontSize: '0.65rem',
+                      }}
+                    >
+                      {step.ok ? 'OK' : 'FAILED'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

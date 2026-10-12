@@ -16,3 +16,4 @@ docker/neo4j-data/
 .idea/
 .vscode/
 *.log
+data/external/
