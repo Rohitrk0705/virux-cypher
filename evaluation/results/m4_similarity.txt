@@ -59,13 +59,13 @@ GT-017  C       base         HIST-C01   0.750  curated     HIST-C03   0.600  T10
 GT-018  B       insert       HIST-C02   0.714  curated     HIST-C04   0.364  T1566 > T1204 > T1059 > T1003 > T1033 > T1082 > T1021
 GT-019  D       base         HIST-C03   0.571  curated     HIST-C01   0.429  T1110 > T1078 > T1059 > T1560 > T1021 > T1560 > T1041
 GT-020  C       base         HIST-C03   1.000  curated     HIST-C01   0.800  T1078 > T1059 > T1068 > T1021 > T1041
-GT-021  C       insert       HIST-C03   0.583  curated     HIST-C01   0.500  T1078 > T1059 > T1083 > T1059 > T1068 > T1041
+GT-021  C       insert       HIST-C01   0.500  curated     HIST-C03   0.450  T1078 > T1059 > T1083 > T1059 > T1068
 GT-022  A       base         HIST-C01   1.000  curated     HIST-C03   0.800  T1078 > T1059 > T1068 > T1021
 GT-023  B       base         HIST-G0013 1.000  mitre_group HIST-G0103 0.667  T1566 > T1204
 GT-024  C       skip+insert  HIST-C05   0.333  curated     HIST-G0124 0.286  T1059 > T1083 > T1059
 
 reference patterns: A = HIST-C01, B = HIST-C02, C = HIST-C03; pattern D has no reference (novel by design)
-top-1 is the pattern's own reference: 12 / 18 incidents of patterns A-C (12 / 18 if a tie for first place counts)
+top-1 is the pattern's own reference: 11 / 18 incidents of patterns A-C (11 / 18 if a tie for first place counts)
 source of the top match over all incidents: curated 21, mitre_group 2
 
 === matching an attack IN PROGRESS (strict prefixes of ground-truth A-C incidents) ===
@@ -94,11 +94,11 @@ No single record equals pattern D, but its parts are in the database because the
 author wrote the distractors and the generator.
 
 === false matches: inferred incidents that contain NO attack event ===
-22 such incidents come out of the label-free pipeline (mapper filter, W = 30 min).
-their best historical similarity: min 0.200, median 0.400, max 0.667
-  at or above 0.3: 14 of 22
-  at or above 0.5: 3 of 22
-  at or above 0.6: 2 of 22
+20 such incidents come out of the label-free pipeline (mapper filter, W = 30 min).
+their best historical similarity: min 0.225, median 0.400, max 0.667
+  at or above 0.3: 17 of 20
+  at or above 0.5: 3 of 20
+  at or above 0.6: 2 of 20
 1 of them contain T1110 (brute force).
 
 === brute-force skew check ===

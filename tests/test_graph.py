@@ -12,7 +12,7 @@ from temporal.trajectory import collapse, get_trajectory
 
 TS = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
 EVENT_KEYS = ["event_id", "timestamp", "source", "user", "source_ip",
-              "destination_ip", "device", "action", "process"]
+              "destination_ip", "device", "action", "process", "destination_port", "byte_count"]
 
 
 def test_connected_components():

@@ -87,8 +87,9 @@ Real responses from a running service are in `evaluation/results/m8_api.txt`.
 
 ### `POST /logs`
 
-Body: a JSON array of 1 to 5,000 Normalized Events (contract 1). All nine fields are required;
-`destination_ip` and `process` may be `null`. An existing `event_id` is replaced.
+Body: a JSON array of 1 to 5,000 Normalized Events (contract 1). The nine original fields are required
+(`destination_ip` and `process` may be `null`). `destination_port` and `byte_count` are optional and
+nullable; responses always include them. An existing `event_id` is replaced.
 
 ```json
 [{"event_id": "evt-900001", "timestamp": "2026-10-12T10:30:00Z", "source": "windows", "user": "john",
@@ -106,6 +107,7 @@ Validation (any failure is a `422` and nothing is stored):
 
 - `event_id`: 1-128 characters from `A-Z a-z 0-9 . _ : -` (it becomes part of incident ids and URLs)
 - `timestamp`: `YYYY-MM-DDTHH:MM:SSZ`, a real UTC date between 1970 and 2100
+- `destination_port`: integer 0-65535 or null; `byte_count`: non-negative integer or null
 - every other field: 1-256 characters, no control characters, no leading or trailing whitespace
 - no unknown fields, no missing fields, no repeated `event_id` within the request
 

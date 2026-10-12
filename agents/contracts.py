@@ -13,6 +13,8 @@ class NormalizedEvent(TypedDict):
     device: str
     action: str
     process: str | None
+    destination_port: int | None   # optional: may be absent, treat as None
+    byte_count: int | None         # optional: bytes sent from source to destination
 
 
 class AttackTechnique(TypedDict):

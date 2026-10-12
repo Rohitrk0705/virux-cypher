@@ -5,7 +5,9 @@ MERGE (e:Event {event_id: row.event_id})
 SET e.timestamp = datetime(row.timestamp),
     e.ts = datetime(row.timestamp).epochSeconds,
     e.source = row.source,
-    e.action = row.action
+    e.action = row.action,
+    e.destination_port = row.destination_port,
+    e.byte_count = row.byte_count
 // drop what an earlier load said about this event, so a changed event is replaced
 WITH row, e
 CALL (e) {

@@ -13,8 +13,18 @@ Change them only by team agreement.
   "destination_ip": "10.0.0.10",
   "device": "WS-01",
   "action": "process_execution",
-  "process": "powershell.exe"
+  "process": "powershell.exe",
+  "destination_port": null,
+  "byte_count": null
 }
+
+Field notes for contract 1:
+- `destination_ip`, `process`, `destination_port` and `byte_count` are nullable; null means "does not
+  apply to this event" or "not recorded by the source".
+- `destination_port` (integer 0-65535 or null) and `byte_count` (non-negative integer or null) were
+  added after the original freeze, by agreement, as OPTIONAL fields: a producer may omit them, and a
+  consumer must treat a missing field as null. Every other field is required.
+- `byte_count` is the number of bytes sent from `source_ip` to `destination_ip` for a network event.
 
 ## 2. Attack Technique (mapping of an event to ATT&CK)
 {

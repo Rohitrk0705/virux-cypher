@@ -40,6 +40,8 @@ MAPPED_FILE = ROOT / "data" / "processed" / "mapped.json"
 BURST_MIN_FAILURES = 5
 BURST_WINDOW = 10 * 60
 NEW_DESTINATION_WINDOW = 60 * 60   # an address first contacted this recently is "new"
+LARGE_UPLOAD_BYTES = 20 * 1024 * 1024
+COMMON_OUTBOUND_PORTS = {25, 53, 80, 443, 587}
 FOLLOW_UP_WINDOW = 60 * 60
 PHISH_LOOKBACK = 60 * 60
 
@@ -74,10 +76,11 @@ RULES_DOC = [
     ("T1021.001", "rdp_session outside an expected administrator or service session"),
     ("T1021.002", "smb_session outside an expected administrator or service session"),
     ("T1005", "file_access performed with a copy tool (robocopy, xcopy) outside an expected service session"),
-    ("T1041", "outbound connection to an external address that no internal host had contacted until the last hour "
-              "(a new destination), when the source is a server (T1041-server) or it is outside business hours "
-              "(T1041-offhours). Contract 1 carries no byte counts or ports, so volume cannot be used; a "
-              "repeat-connection proxy for volume was tried and removed (20 true vs 909 false positives over 13 seeds)."),
+    ("T1041", "outbound connection to an external address that sends at least 20 MB (byte_count) and is also "
+              "unusual in one way: the destination is new to the organisation (first contacted within the last "
+              "hour), the port is not a common outbound port, it is outside business hours, or the source is a "
+              "server (T1041-volume). When the source does not record byte_count the rule falls back to: new "
+              "destination from a server (T1041-server) or outside business hours (T1041-offhours)."),
     ("(process table)", "process_execution of a dual-use tool outside an expected administrator or service session: "
                         + ", ".join(f"{p} -> {t[0]}" for p, t in PROCESS_RULES.items())),
 ]
@@ -226,7 +229,17 @@ class AttackMapper:
                 dst = e["destination_ip"]
                 if dst is not None and not env.is_internal(dst):
                     new_destination = ts - first_contact.setdefault(dst, ts) <= NEW_DESTINATION_WINDOW
-                    if new_destination:
+                    size, port = e.get("byte_count"), e.get("destination_port")
+                    if size is not None:
+                        # volume is known: a large upload, plus one more unusual property
+                        if size >= LARGE_UPLOAD_BYTES and (
+                                new_destination
+                                or (port is not None and port not in COMMON_OUTBOUND_PORTS)
+                                or not env.business_hours(ts)
+                                or e["device"] in env.SERVERS):
+                            hit, rule = ("T1041", "Exfiltration", 0.65), "T1041-volume"
+                    elif new_destination:
+                        # volume not recorded by the source: fall back to weaker signals
                         if e["device"] in env.SERVERS:
                             hit, rule = ("T1041", "Exfiltration", 0.50), "T1041-server"
                         elif not env.business_hours(ts):

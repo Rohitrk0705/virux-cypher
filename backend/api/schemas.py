@@ -45,6 +45,10 @@ class NormalizedEvent(Contract):
     device: Text = Field(examples=["WS-01"])
     action: Text = Field(examples=["process_execution"])
     process: Text | None = Field(examples=["powershell.exe"])
+    # optional and nullable: may be omitted from a request; always present in responses
+    destination_port: Annotated[int, Field(ge=0, le=65535)] | None = Field(default=None, examples=[443])
+    byte_count: Annotated[int, Field(ge=0, le=2**53)] | None = Field(
+        default=None, description="bytes sent from source_ip to destination_ip", examples=[52428800])
 
 
 # --- contract 2 ---

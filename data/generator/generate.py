@@ -142,9 +142,11 @@ VARIANT_PLAN = ["base", "base", "base", "skip", "insert", "skip+insert"]
 EVENT_KEYS = [
     "event_id", "timestamp", "source", "user", "source_ip",
     "destination_ip", "device", "action", "process",
+    "destination_port", "byte_count",
 ]
 LABEL_KEYS = ["event_id", "technique_id", "technique_name", "tactic", "confidence"]
-NULLABLE = {"destination_ip", "process"}
+NULLABLE = {"destination_ip", "process", "destination_port", "byte_count"}
+INTEGER = {"destination_port", "byte_count"}
 TS_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
 
 
@@ -501,6 +503,52 @@ def attack_incidents(rng, noisy=False):
 # Assemble, validate, write
 # ----------------------------------------------------------------------------
 
+# ----------------------------------------------------------------------------
+# Network detail (destination_port, byte_count)
+# ----------------------------------------------------------------------------
+
+SERVICE_PORT = {"SRV-DB01": 1433, "SRV-FILE01": 445, "SRV-DC01": 389, "SRV-MAIL01": 25}
+IP_DEVICE = {ip: device for device, ip in DEVICE_IP.items()}
+KB, MB = 1024, 1024 * 1024
+
+
+def log_uniform(rng, low, high):
+    """A size between low and high, spread evenly across orders of magnitude."""
+    return int(low * (high / low) ** rng.random())
+
+
+def add_network_detail(events, seed, noisy):
+    """Fill destination_port and byte_count (bytes sent by the source) for
+    network events; both stay None elsewhere. Uses its own random stream, so
+    the rest of the dataset is identical to what it was before these fields
+    existed."""
+    rng = random.Random(seed * 7919 + 17)
+    for e in events:
+        port = size = None
+        action, dst = e["action"], e["destination_ip"]
+        if action == "rdp_session":
+            port = 3389
+        elif action == "smb_session":
+            port = 445
+        elif action == "email_received":
+            port = 25
+        elif action == "network_connection" and dst in IP_DEVICE:
+            port, size = SERVICE_PORT.get(IP_DEVICE[dst], 445), log_uniform(rng, KB, 2 * MB)
+        elif action == "network_connection" and e.get("technique") == "T1041":
+            port = rng.choice([443, 443, 443, 8443, 4444])
+            # most exfiltration is bulk; one in ten is a small, quiet transfer
+            size = log_uniform(rng, 500 * KB, 5 * MB) if rng.random() < 0.1 else log_uniform(rng, 30 * MB, 2000 * MB)
+        elif action == "network_connection" and e["user"] == MAIL_USER:
+            port, size = 25, log_uniform(rng, 5 * KB, 5 * MB)
+        elif action == "network_connection" and e["user"] == SYSTEM_USER:
+            port, size = 443, log_uniform(rng, KB, 20 * KB)
+        elif action == "network_connection":   # staff web traffic
+            port = 443 if rng.random() < 0.85 else 80
+            big_upload = noisy and rng.random() < 0.03   # cloud storage, large attachments
+            size = log_uniform(rng, 20 * MB, 300 * MB) if big_upload else log_uniform(rng, 2 * KB, 3 * MB)
+        e["destination_port"], e["byte_count"] = port, size
+
+
 def iso(ts):
     return ts.strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -520,6 +568,7 @@ def assemble(seed, profile="noisy"):
     everything.sort(key=lambda e: (e["ts"], e["tie"]))
     for n, e in enumerate(everything, 1):
         e["event_id"] = f"evt-{n:05d}"
+    add_network_detail(everything, seed, noisy)
 
     events = [
         {**{k: e.get(k) for k in EVENT_KEYS}, "timestamp": iso(e["ts"])}
@@ -559,7 +608,9 @@ def validate(events, labels, truth):
     for e in events:
         assert list(e) == EVENT_KEYS, f"event keys drifted: {list(e)}"
         for k, v in e.items():
-            assert isinstance(v, str) or (v is None and k in NULLABLE), f"{e['event_id']}.{k}={v!r}"
+            ok = (v is None and k in NULLABLE) or (isinstance(v, int) and v >= 0 if k in INTEGER
+                                                   else isinstance(v, str))
+            assert ok, f"{e['event_id']}.{k}={v!r}"
         assert TS_RE.match(e["timestamp"]), e["timestamp"]
         assert e["event_id"] not in ids, f"duplicate {e['event_id']}"
         ids.add(e["event_id"])

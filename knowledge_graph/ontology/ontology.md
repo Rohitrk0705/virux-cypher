@@ -7,7 +7,7 @@ records (contract 2). Constraints and indexes are in `schema.cypher`.
 
 | Label | Key | Other properties | Source |
 |---|---|---|---|
-| `Event` | `event_id` | `timestamp` (datetime), `ts` (epoch seconds), `source`, `action` | contract 1 |
+| `Event` | `event_id` | `timestamp` (datetime), `ts` (epoch seconds), `source`, `action`, `destination_port`, `byte_count` | contract 1 |
 | `User` | `name` | | `user` |
 | `Device` | `name` | `user_count`, `hub` | `device` |
 | `IP` | `address` | `internal`, `user_count`, `hub` | `source_ip`, `destination_ip` |

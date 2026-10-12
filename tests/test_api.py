@@ -11,7 +11,7 @@ from knowledge_graph.connection import run_text
 
 TS = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
 EVENT_KEYS = ["event_id", "timestamp", "source", "user", "source_ip",
-              "destination_ip", "device", "action", "process"]
+              "destination_ip", "device", "action", "process", "destination_port", "byte_count"]
 
 client = TestClient(app, raise_server_exceptions=False)
 
@@ -180,6 +180,29 @@ def test_logs_ingests_maps_and_groups_new_events(graph):
         assert upsert["events_in_graph"] == before["events"] + 7
         stored = run_text("MATCH (e:Event {event_id: 'evt-api-test-0'}) RETURN e.action AS action")
         assert stored == [{"action": "logoff"}]
+    finally:
+        cleanup()
+    assert client.get("/health").json() == before
+
+
+def test_new_optional_fields_can_be_omitted_or_set_and_are_validated(graph):
+    before = client.get("/health").json()
+    base = {**GOOD, "event_id": "evt-api-test-net", "action": "network_connection", "source": "firewall",
+            "destination_ip": "100.64.250.9", "user": "api_test_user", "device": "API-TEST-01",
+            "source_ip": "10.250.0.1", "timestamp": "2020-01-01T00:00:00Z"}
+    for bad in ({"destination_port": 70000}, {"destination_port": -1}, {"byte_count": -5},
+                {"byte_count": "many"}, {"destination_port": 44.5}):
+        assert client.post("/logs", json=[{**base, **bad}]).status_code == 422, bad
+    try:
+        assert client.post("/logs", json=[base]).status_code == 200                      # both omitted
+        stored = run_text("MATCH (e:Event {event_id: 'evt-api-test-net'}) "
+                          "RETURN e.destination_port AS port, e.byte_count AS size")
+        assert stored == [{"port": None, "size": None}]
+        full = {**base, "destination_port": 4444, "byte_count": 123456789}
+        assert client.post("/logs", json=[full]).status_code == 200
+        stored = run_text("MATCH (e:Event {event_id: 'evt-api-test-net'}) "
+                          "RETURN e.destination_port AS port, e.byte_count AS size")
+        assert stored == [{"port": 4444, "size": 123456789}]
     finally:
         cleanup()
     assert client.get("/health").json() == before

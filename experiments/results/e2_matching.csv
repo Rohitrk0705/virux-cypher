@@ -1,5 +1,5 @@
 trajectories,graph,own reference is the unique top match,own reference is top or tied for top,incidents (patterns A-C),accuracy (unique)
 ground-truth trajectories,static,17,17,18,0.944
 ground-truth trajectories,temporal,17,17,18,0.944
-pipeline trajectories,static,10,12,18,0.556
-pipeline trajectories,temporal,10,12,18,0.556
+pipeline trajectories,static,9,11,18,0.500
+pipeline trajectories,temporal,9,11,18,0.500

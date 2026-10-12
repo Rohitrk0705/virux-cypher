@@ -11,7 +11,7 @@ from agents.investigation_agent import (Decision, Investigation, ScriptedLLM, To
 
 TS = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
 EVENT_KEYS = ["event_id", "timestamp", "source", "user", "source_ip",
-              "destination_ip", "device", "action", "process"]
+              "destination_ip", "device", "action", "process", "destination_port", "byte_count"]
 
 TRAJECTORY = {"incident_id": "INC-1", "techniques": [
     {"id": "T1078", "timestamp": "2026-09-07T10:00:00Z"},

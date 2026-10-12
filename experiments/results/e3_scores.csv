@@ -5,11 +5,11 @@ ground-truth trajectories,temporal,novel,0.343,0.479,0.550,6
 ground-truth trajectories,static,known,1.000,1.000,1.000,9
 ground-truth trajectories,static,variant,0.600,0.765,0.833,9
 ground-truth trajectories,static,novel,0.286,0.425,0.500,6
-pipeline trajectories,temporal,attack-free inferred incident,0.200,0.357,0.667,22
+pipeline trajectories,temporal,attack-free inferred incident,0.225,0.399,0.667,20
 pipeline trajectories,temporal,known,0.000,0.681,1.000,9
-pipeline trajectories,temporal,variant,0.250,0.544,0.800,9
+pipeline trajectories,temporal,variant,0.250,0.534,0.800,9
 pipeline trajectories,temporal,novel,0.250,0.408,0.571,6
-pipeline trajectories,static,attack-free inferred incident,0.200,0.417,0.750,22
+pipeline trajectories,static,attack-free inferred incident,0.250,0.468,0.750,20
 pipeline trajectories,static,known,0.000,0.685,1.000,9
-pipeline trajectories,static,variant,0.250,0.562,0.800,9
+pipeline trajectories,static,variant,0.250,0.555,0.800,9
 pipeline trajectories,static,novel,0.250,0.375,0.571,6

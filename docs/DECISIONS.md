@@ -9,6 +9,7 @@ One line each: what was decided and why. Newest milestone last.
 | P1 | Work is committed on branch `backend-milestones`, not `main`; nothing is pushed. | Keeps `main` untouched until you have read the results; merge is one command. |
 | P2 | No `milestone-reviewer` agent is defined in this repo or in `~/.claude/agents`, so each review is done by a general-purpose subagent given a fixed reviewer brief (Blocking / Should-fix / Nits, review only, no edits). | Closest available equivalent; the brief is quoted at the top of `docs/REVIEWS.md`. |
 | P3 | `pytest` and `httpx` were added to `backend/requirements.txt`. | Needed to run tests and to test FastAPI endpoints. |
+| P5 | From the contract-change task onward, backend work happens in a separate git worktree at `~/Desktop/virux-cypher-backend` (branch `backend-milestones`). It symlinks `backend/.venv`, `data/mitre/raw` and `data/external` from the main folder. | While I was mid-edit, the main folder was switched to a `frontend` branch by another tool, and one of my edits landed on that branch's files (I reverted it). Two tools switching branches in one folder will corrupt each other's work; a worktree gives each its own checkout of the same repository. Remove it with `git worktree remove` when no longer wanted. |
 | P4 | Captured run output is stored under `evaluation/results/` and `experiments/results/`. | Every number in `PROGRESS.md` can be traced to a file produced by code. |
 
 ## M1 — generator (changes after your approval)
@@ -101,3 +102,14 @@ One line each: what was decided and why. Newest milestone last.
 | B6 | `POST /logs` validation is stricter than contract 1's wording: bounded lengths, URL-safe `event_id`, real dates 1970-2100, no control characters. | Contract 1 fixes field names and types; these bounds protect the graph and the URLs. The bundled dataset satisfies all of them. |
 | B7 | Optional `API_TOKEN` for `POST /logs`; reads are open; no pagination. | Enough for a demo without adding an auth system. Stated in the README. |
 | B8 | `/investigate` and `/explain` re-run the agent on every call; nothing is cached. | Deterministic and fast on this data (tens of milliseconds); caching would need invalidation on ingest. |
+
+## Contract change — destination_port and byte_count
+
+| # | Decision | Rationale |
+|---|---|---|
+| C1 | `destination_port` and `byte_count` are optional on input (a missing field means null) and always present on output. | You asked for optional, nullable fields; always emitting them keeps consumers simple. |
+| C2 | `byte_count` means bytes sent from `source_ip` to `destination_ip`. | Exfiltration is about outbound volume; a single direction keeps the field unambiguous. Written into `data-contracts.md`. |
+| C3 | The generator fills the two fields from a separate random stream. | Both profiles are otherwise identical to the datasets before the change (checked field by field), so earlier results stay comparable. |
+| C4 | Generator values: ports by service; attack exfiltration 30 MB–2 GB (one in ten is 0.5–5 MB); benign web 2 KB–3 MB with 3% uploads of 20–300 MB in the noisy profile. | Plausible magnitudes, with deliberate overlap so the rule is not perfect. Chosen by the same author as the rule's threshold; stated in the evaluation's limitations. |
+| C5 | Exfiltration rule: at least 20 MB sent to an external address, plus one of: destination new to the organisation, uncommon port, outside business hours, server source. Without `byte_count` it falls back to the previous rule. | Uses the new fields as you asked; the fallback keeps sources that record no volume working (needed for real data). |
+| C6 | No separate reviewer pass for this task; it is covered by the M9 review. | It is a contract-and-plumbing change with tests; the next review reads the same files. |

@@ -35,6 +35,8 @@ def load_events(events, runner=None):
         missing = [k for k in REQUIRED if e.get(k) is None]
         if missing:
             raise ValueError(f"event {e.get('event_id')!r} is missing required field(s) {missing}")
+    # optional contract-1 fields: a producer may leave them out
+    events = [{"destination_port": None, "byte_count": None, **e} for e in events]
     for i in range(0, len(events), BATCH):
         runner("load_events", rows=events[i:i + BATCH])
     runner("mark_entities", internal_prefix=config.INTERNAL_PREFIX, hub_users=config.HUB_USERS)

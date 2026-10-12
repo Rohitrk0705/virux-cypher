@@ -39,34 +39,34 @@ incidents contributing no instance: 0 without a trajectory, 0 with a single step
 training data                                     top1 top1tie   top3    mrr      P      R     F1  correct/instances incidents
 ------------------------------------------------------------------------------------------------------------------------------
 no knowledge: uniform over 222 techniques        0.005   0.005  0.014  0.027      -      -      -         (analytic)         -
-curated, most frequent next step (no context)    0.229   0.229  0.471  0.393  0.015  0.067  0.025            16 / 70        20
-MITRE groups only (inferred order)               0.014   0.014  0.014  0.064  0.010  0.013  0.011             1 / 70        20
-DEFAULT: curated (hand-specified)                0.471   0.450  0.557  0.517  0.278  0.303  0.283            33 / 70        20
-groups + curated pooled in one table             0.171   0.179  0.200  0.251  0.118  0.123  0.116            12 / 70        20
-curated minus 4 distractors overlapping D        0.471   0.464  0.543  0.520  0.206  0.246  0.212            33 / 70        20
-curated minus own family's reference             0.186   0.177  0.371  0.275  0.207  0.147  0.163            13 / 70        20
-other incidents only, leave-one-out              0.500   0.514  0.571  0.543  0.264  0.272  0.263            35 / 70        20
-curated + other incidents, leave-one-out         0.557   0.538  0.600  0.586  0.302  0.324  0.308            39 / 70        20
-other families' incidents only                   0.229   0.233  0.314  0.299  0.023  0.067  0.034            16 / 70        20
-curated minus own ref + other families           0.300   0.317  0.514  0.413  0.203  0.181  0.184            21 / 70        20
+curated, most frequent next step (no context)    0.232   0.232  0.464  0.394  0.015  0.067  0.025            16 / 69        20
+MITRE groups only (inferred order)               0.014   0.014  0.014  0.065  0.010  0.013  0.011             1 / 69        20
+DEFAULT: curated (hand-specified)                0.478   0.457  0.565  0.524  0.280  0.307  0.288            33 / 69        20
+groups + curated pooled in one table             0.174   0.181  0.203  0.255  0.121  0.124  0.120            12 / 69        20
+curated minus 4 distractors overlapping D        0.478   0.471  0.551  0.527  0.211  0.248  0.215            33 / 69        20
+curated minus own family's reference             0.188   0.180  0.377  0.276  0.207  0.151  0.167            13 / 69        20
+other incidents only, leave-one-out              0.507   0.522  0.580  0.551  0.268  0.276  0.267            35 / 69        20
+curated + other incidents, leave-one-out         0.565   0.546  0.609  0.594  0.305  0.328  0.312            39 / 69        20
+other families' incidents only                   0.232   0.237  0.319  0.298  0.023  0.067  0.034            16 / 69        20
+curated minus own ref + other families           0.304   0.321  0.522  0.416  0.204  0.184  0.188            21 / 69        20
 
 DEFAULT model by pattern. A, B, C have their reference sequence in the database. D has no
 single reference, but every 2-step path of D occurs in a hand-written distractor:
   pattern A                                      0.667   0.667  0.733  0.700  0.483  0.470  0.460            10 / 15         5
   pattern B                                      0.412   0.382  0.588  0.500  0.219  0.287  0.224             7 / 17         5
-  pattern C                                      0.600   0.600  0.600  0.617  0.633  0.587  0.543             9 / 15         5
+  pattern C                                      0.643   0.643  0.643  0.661  0.700  0.620  0.617             9 / 14         5
   pattern D                                      0.304   0.261  0.391  0.344  0.250  0.188  0.208             7 / 23         5
   pattern D, overlapping distractors removed     0.217   0.217  0.261  0.278  0.037  0.125  0.057             5 / 23         5
 
 curated minus own family's reference, by pattern (the unseen-pattern setting):
   pattern A                                      0.000   0.000  0.267  0.133  0.000  0.000  0.000             0 / 15         5
   pattern B                                      0.353   0.353  0.529  0.441  0.156  0.225  0.161             6 / 17         5
-  pattern C                                      0.000   0.027  0.267  0.124  0.000  0.000  0.000             0 / 15         5
+  pattern C                                      0.000   0.029  0.286  0.119  0.000  0.000  0.000             0 / 14         5
   pattern D                                      0.304   0.261  0.391  0.344  0.250  0.188  0.208             7 / 23         5
 
 DEFAULT model by variant:
   base (verbatim template)                       0.625   0.609  0.719  0.667  0.453  0.476  0.463            20 / 32        10
-  variant (skip and/or insert)                   0.342   0.316  0.421  0.390  0.282  0.256  0.250            13 / 38        10
+  variant (skip and/or insert)                   0.351   0.324  0.432  0.401  0.283  0.261  0.255            13 / 37        10
 
 incidents contributing no instance: 1 without a trajectory, 3 with a single step; macro P/R/F1 average over 15 target techniques.
 

@@ -97,7 +97,26 @@ def test_exfiltration_rule_uses_no_attacker_address_knowledge():
     assert "evt-00002" not in mapped([logon, single])
 
 
-def test_exfiltration_new_destination_offhours_or_server():
+def test_exfiltration_by_volume_needs_a_large_upload_and_one_unusual_property():
+    MB = 1024 * 1024
+    net = lambda n, minute, **kw: event(n, minute, "network_connection", source="firewall", **kw)
+    with_size = lambda e, size, port=443: {**e, "byte_count": size, "destination_port": port}
+    out, rules = AttackMapper().map_with_rules([
+        with_size(net(1, 0, dst="192.0.2.10"), 2 * MB),                    # first contact, small: no
+        with_size(net(2, 1, dst="203.0.113.9"), 500 * MB),                 # large, new destination: yes
+        with_size(net(3, 2, dst="203.0.113.50"), 5 * MB),                  # new destination but small: no
+    ])
+    assert rules == {"evt-00002": "T1041-volume"}
+    later = lambda n, **kw: {**net(n, 0, **kw), "timestamp": "2026-09-08T11:00:00Z"}   # next day, daytime
+    history = [with_size(net(1, 0, dst="192.0.2.10"), MB)]
+    out, rules = AttackMapper().map_with_rules(history + [
+        with_size(later(2, dst="192.0.2.10"), 200 * MB),                   # large, but known site, 443, daytime
+        with_size(later(3, dst="192.0.2.10"), 200 * MB, port=4444),        # same, non-standard port
+    ])
+    assert rules == {"evt-00003": "T1041-volume"}
+
+
+def test_exfiltration_falls_back_when_volume_is_not_recorded():
     net = lambda n, minute, **kw: event(n, minute, "network_connection", source="firewall", **kw)
     out, rules = AttackMapper().map_with_rules([
         net(1, 0, dst="203.0.113.9"), net(2, 3, dst="203.0.113.9"),          # daytime workstation: not mapped

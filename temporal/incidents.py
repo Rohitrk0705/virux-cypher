@@ -131,6 +131,7 @@ def get_incident_events(incident_id, method=None):
             "user": r["user"], "source_ip": r["source_ip"],
             "destination_ip": r["destination_ip"], "device": r["device"],
             "action": r["action"], "process": r["process"],
+            "destination_port": r["destination_port"], "byte_count": r["byte_count"],
         }
         for r in run("incident_events", incident_id=incident_id, method=method)
     ]
@@ -143,7 +144,8 @@ def get_all_events(runner=None):
     return [
         {"event_id": r["event_id"], "timestamp": iso(r["ts"]), "source": r["source"], "user": r["user"],
          "source_ip": r["source_ip"], "destination_ip": r["destination_ip"], "device": r["device"],
-         "action": r["action"], "process": r["process"]}
+         "action": r["action"], "process": r["process"],
+         "destination_port": r["destination_port"], "byte_count": r["byte_count"]}
         for r in run("all_events")
     ]
 

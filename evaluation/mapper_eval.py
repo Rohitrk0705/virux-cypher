@@ -31,16 +31,12 @@ LIMITATIONS = """LIMITATIONS - read before quoting any number above:
 2. The noisy profile is the headline. The clean profile is the first version
    of the dataset, where staff never did anything attack-like; it is shown
    only to make the size of that effect visible.
-3. Exfiltration (T1041) is weak by construction. Contract 1 has no byte counts
-   and no ports, so the rule can only use direction, whether the destination
-   is new to the organisation, the time of day, whether the source is a server,
-   and nothing else. A daytime connection from a workstation to a new address
-   is indistinguishable from a web visit and is missed. A repeat-connection
-   proxy for volume was tried and removed: over 13 noisy seeds it produced 20
-   true and 909 false positives.
-   The off-hours sub-rule has no false positives only because benign staff in
-   this dataset never work outside business hours; real networks have plenty
-   of legitimate night-time traffic to new addresses.
+3. Exfiltration (T1041) now uses byte_count and destination_port, which were
+   added to contract 1 for this purpose. The generator's attack transfers are
+   mostly 30 MB to 2 GB and its benign web traffic mostly under 3 MB, with 3%
+   benign uploads of 20 to 300 MB; that separation was chosen by the same
+   author who wrote the 20 MB threshold. Small, quiet exfiltration (one in ten
+   attack transfers here) is missed by design.
 4. Two rules look forward in time (failure bursts; an Office launch is mapped
    only once a script host follows), so the mapper is batch-only.
 5. The administrator at their own desk is allow-listed. An attack that starts
@@ -55,7 +51,9 @@ PREVIOUS = """PREVIOUS FIGURES, kept for the record (do not quote as results):
   addresses that had logged in earlier, which only worked because the clean
   generator reused eight attacker addresses, and its benign data contained no
   attack-like staff activity. The reviewer measured micro F1 0.913 (range
-  0.886-0.948) for that version over 12 other seeds (docs/REVIEWS.md, M3)."""
+  0.886-0.948) for that version over 12 other seeds (docs/REVIEWS.md, M3).
+  second mapper version (no byte_count or port in contract 1), noisy profile, 13 seeds:
+  micro P 0.564  R 0.887  F1 0.689 mean (evaluation/results/m3_mapper_v2_noisy.txt)."""
 
 
 def parent(technique_id):
@@ -154,7 +152,7 @@ def generator_module():
     return module
 
 
-T1041_RULES = ["T1041-server", "T1041-offhours"]
+T1041_RULES = ["T1041-volume", "T1041-server", "T1041-offhours"]
 
 
 def multi_seed(profile):
@@ -203,7 +201,7 @@ def rule_table(profile):
 def multi_seed_report(rows, profile):
     head = (f"{'seed':>5}{'events':>8}{'labelled':>9}{'microP':>8}{'microR':>8}{'microF1':>8}"
             f"{'macroF1':>8}{'detP':>7}{'detR':>7}{'F1 noT1110':>11}{'T1005 R':>9}{'T1041 R':>9}"
-            f"{'T1041 tp srv/offhrs':>22}{'fp':>5}{'missed':>7}")
+            f"{'T1041 tp vol/srv/off':>22}{'fp':>5}{'missed':>7}")
     lines = [f"=== mapper across {len(rows)} generator seeds, profile '{profile}' ===", head, "-" * len(head)]
     for r in rows:
         lines.append(
@@ -221,7 +219,7 @@ def multi_seed_report(rows, profile):
             f"{fn([r['t1041_recall'] for r in rows]):>9.3f}")
     lines.append("macroF1 = macro_all; det = detection; 'F1 noT1110' = micro F1 without brute force; "
                  "sd = population standard deviation over the seeds.")
-    lines.append("T1041 columns: true positives from each sub-rule (server / off-hours), "
+    lines.append("T1041 columns: true positives from each sub-rule (volume / server / off-hours), "
                  "false positives, missed events.")
     return "\n".join(lines)
 

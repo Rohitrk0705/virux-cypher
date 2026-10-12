@@ -364,3 +364,21 @@ TODOs carried forward:
 - No request byte limit; every ingest re-maps the whole graph; an ingest can change which hosts count as hubs and so regroup existing incidents.
 - The ingest lock is per process; run a single worker.
 - `/docs` needs internet access (Swagger UI from a CDN).
+
+## Contract change: `destination_port` and `byte_count` — done
+
+Contract 1 gained two optional, nullable fields (`docs/data-contracts.md`). The generator, graph, API schema, types and mapper use them; both generator profiles are otherwise identical to the earlier datasets, field by field. Everything was regenerated from scratch; 121 tests pass.
+
+Effect of the new exfiltration rule (at least 20 MB sent externally, plus one unusual property), noisy profile, 13 seeds:
+
+| | Before (no volume or port) | After |
+|---|---|---|
+| Mapper micro precision | 0.564 | 0.585 |
+| Mapper micro recall | 0.887 | 0.893 |
+| Mapper micro F1 | 0.689 (sd 0.027) | 0.706 (sd 0.027, range 0.665–0.774) |
+| T1041 recall | 0.851 | 0.933 |
+| T1041 rule precision, pooled | server sub-rule 0.389 | volume rule 0.778 (259 true, 74 false) |
+
+Before: `evaluation/results/m3_mapper_v2_noisy.txt`. After: `evaluation/results/m3_mapper.txt`.
+
+Downstream on seed 42: ground-truth results are unchanged. The label-free pipeline now infers 51 incidents (20 with no attack, was 53 and 22), reproduces 5 / 24 trajectories end to end (unchanged), and E3 on pipeline trajectories is 14 / 24 (was 13 / 24). The 20 MB threshold and the generator's byte counts were chosen by the same author, so this gain is not evidence about real traffic.
