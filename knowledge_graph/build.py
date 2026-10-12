@@ -18,24 +18,27 @@ from . import config, loader
 from .connection import get_driver, run
 
 LIMITATIONS = """LIMITATIONS - read before quoting any number above:
-1. Easy dataset. The generator keeps incidents at least 3 hours apart whenever
-   they share a user or a device. Incidents with different users can still be
-   minutes apart and can share an attacker address (that is the one 'merged'
-   incident at W >= 60). Grouping is therefore much easier here than on real
-   data, and these scores must not be read as real-world accuracy.
+1. Easy grouping. The generator keeps incidents at least 3 hours apart whenever
+   they share a user or a device, so two attacks never interleave on one host
+   or account. Grouping is therefore much easier here than on real data, and
+   these scores must not be read as real-world accuracy.
 2. 'labels' rows choose candidate events with the ground-truth labels. That is
    leakage; they are an optimistic upper bound and never the headline figure.
 3. 'heuristic' is label-free but has a ceiling: file_access events and Office
    application launches are never candidates, so T1005 and T1204.002 steps can
-   never be grouped (25 of the attack events) and trajGT is capped accordingly.
-   Its routine-application list equals the generator's benign application list,
-   so it is tuned to this dataset. About two thirds of its candidates are
-   benign web and mail events, hence the many 'false' incidents.
-4. The default window (30 min) was picked from this same sweep over the same
-   24 incidents; it is not validated on held-out data.
-5. trajGT gives the paired incident's events their ground-truth techniques, so
-   it measures grouping only. trajMap uses the rule-based mapper end to end.
-6. Some coverage comes from benign events bridging gaps between attack steps."""
+   never be grouped and trajGT is capped accordingly. Its routine-application
+   list equals the generator's benign application list. Most of its candidates
+   are benign web and mail events, hence the many 'false' incidents.
+4. 'mapper' is label-free: candidates are the events the rule-based mapper
+   tagged, so it inherits every mapper false positive and miss.
+5. The default window (30 min) was picked from a sweep on the first (clean)
+   version of the dataset and is not validated on held-out data. Slow-paced
+   incidents, whose steps are 15-45 minutes apart, fragment at 30 minutes; a
+   60-minute window scores higher on this draw but was not adopted after the
+   fact.
+6. trajGT gives the paired incident's events their ground-truth techniques, so
+   it measures grouping only. trajMap uses the mapper's techniques end to end.
+7. Some coverage comes from benign events bridging gaps between attack steps."""
 
 
 def available_methods():

@@ -15,10 +15,21 @@ Four attack patterns (A-D) are instantiated several times each with different
 users, hosts, attacker IPs and timing. Some instances skip a step or insert an
 extra one, so the dataset contains genuine variants of each pattern.
 
-Deterministic: the same --seed always produces byte-identical files.
+Two profiles:
+  noisy (default) - benign activity overlaps with what attacks look like:
+      staff occasionally run PowerShell/cmd, map SMB shares, trigger UAC
+      prompts, use copy and archive tools, log in from home, visit one-off
+      websites and get locked out; the administrator uses Office and can be
+      the victim; servers make legitimate outbound connections; most mail is
+      internal; every incident uses attacker addresses seen nowhere else.
+  clean - the first version of the dataset, kept reproducible for comparison.
+      Benign staff never do anything attack-like and attackers reuse a pool of
+      eight addresses, which made detection unrealistically easy.
+
+Deterministic: the same --seed and --profile always produce byte-identical files.
 
 Usage:
-  python generate.py [--seed 42] [--out-dir ../processed]
+  python generate.py [--seed 42] [--profile noisy|clean] [--out-dir ../processed]
 """
 
 import argparse
@@ -58,6 +69,7 @@ STAFF = {
 }
 ADMIN_USER, ADMIN_WS = "admin_lee", "WS-07"
 BACKUP_USER = "svc_backup"
+MAIL_USER, SYSTEM_USER = "svc_mail", "system"   # noisy profile only
 
 SERVERS = ["SRV-DC01", "SRV-DB01", "SRV-FILE01"]
 
@@ -68,6 +80,21 @@ ATTACKER_IPS = [
     "203.0.113.7", "203.0.113.45", "203.0.113.118", "203.0.113.201",
     "198.51.100.23", "198.51.100.77", "198.51.100.140", "198.51.100.212",
 ]
+
+# noisy profile
+UPDATE_IPS = ["192.0.2.200", "192.0.2.201"]
+HOME_IPS = {user: f"198.18.0.{n}" for n, user in
+            enumerate(["john", "priya", "marcus", "elena", "david", "sara", "admin_lee"], 10)}
+NOISE = {
+    "remote_day": 0.08,        # user logs in from home
+    "lockout": 0.02,           # burst of failed logons after a password change
+    "uac": 0.06,               # one elevation prompt in the day
+    "script": 0.03,            # share of process executions that are PowerShell/cmd
+    "smb_share": 0.10,         # share of file-share accesses logged as an SMB session
+    "copy_tool": 0.03,         # share of file accesses done locally with a copy/archive tool
+    "long_tail_site": 0.12,    # share of web visits to a site nobody else visits
+    "internal_mail": 0.60,     # share of mail that comes from a colleague
+}
 
 START_DAY = datetime(2026, 9, 7, tzinfo=timezone.utc)  # a Monday
 NUM_DAYS = 12  # Mon 7 Sep .. Fri 18 Sep 2026 (10 business days)
@@ -134,7 +161,11 @@ def ev(ts, source, user, source_ip, destination_ip, device, action, process):
 # Benign baseline
 # ----------------------------------------------------------------------------
 
-def staff_day(rng, day, user, ws):
+def long_tail_ip(rng):
+    return f"198.18.{rng.randint(1, 250)}.{rng.randint(1, 250)}"
+
+
+def staff_day(rng, day, user, ws, noisy=False):
     ip = DEVICE_IP[ws]
     out = []
     arrive = day + timedelta(hours=8, seconds=rng.randint(0, 5400))
@@ -145,7 +176,14 @@ def staff_day(rng, day, user, ws):
         for _ in range(rng.randint(1, 2)):
             out.append(ev(t, "windows", user, ip, None, ws, "logon_failure", None))
             t += timedelta(seconds=rng.randint(4, 20))
-    out.append(ev(t, "windows", user, ip, None, ws, "logon_success", None))
+    if noisy and rng.random() < NOISE["lockout"]:  # stale password retried by a client
+        for _ in range(rng.randint(5, 9)):
+            out.append(ev(t, "windows", user, ip, None, ws, "logon_failure", None))
+            t += timedelta(seconds=rng.randint(3, 15))
+    if noisy and rng.random() < NOISE["remote_day"]:  # working from home
+        out.append(ev(t, "windows", user, HOME_IPS[user], ip, ws, "logon_success", None))
+    else:
+        out.append(ev(t, "windows", user, ip, None, ws, "logon_success", None))
 
     span = int((leave - t).total_seconds()) - 120
     for _ in range(rng.randint(40, 58)):
@@ -159,7 +197,15 @@ def staff_day(rng, day, user, ws):
                 "outlook.exe", "excel.exe", "winword.exe", "chrome.exe",
                 "teams.exe", "bankcore.exe", "notepad.exe",
             ])
+            if noisy and rng.random() < NOISE["script"]:  # logon script, IT helper script
+                proc = rng.choice(["powershell.exe", "cmd.exe"])
             out.append(ev(at, "windows", user, ip, None, ws, "process_execution", proc))
+        elif kind == "file" and noisy and rng.random() < NOISE["smb_share"]:
+            out.append(ev(at, "windows", user, ip, DEVICE_IP["SRV-FILE01"],
+                          "SRV-FILE01", "smb_session", None))
+        elif kind == "file" and noisy and rng.random() < NOISE["copy_tool"]:
+            out.append(ev(at, "windows", user, ip, None, ws, "file_access",
+                          rng.choice(["xcopy.exe", "robocopy.exe", "7z.exe"])))
         elif kind == "file":
             out.append(ev(at, "windows", user, ip, DEVICE_IP["SRV-FILE01"],
                           "SRV-FILE01", "file_access", None))
@@ -167,18 +213,32 @@ def staff_day(rng, day, user, ws):
             dst = rng.choice(["SRV-DB01", "SRV-FILE01", "SRV-DC01"])
             out.append(ev(at, "firewall", user, ip, DEVICE_IP[dst], ws,
                           "network_connection", None))
+        elif kind == "net_ext" and noisy and rng.random() < NOISE["long_tail_site"]:
+            site = long_tail_ip(rng)  # a page load makes a few connections
+            for _ in range(rng.randint(1, 3)):
+                out.append(ev(at, "firewall", user, ip, site, ws, "network_connection", None))
+                at += timedelta(seconds=rng.randint(1, 20))
         elif kind == "net_ext":
             out.append(ev(at, "firewall", user, ip, rng.choice(BENIGN_WEB_IPS), ws,
                           "network_connection", None))
+        elif noisy and rng.random() < NOISE["internal_mail"]:
+            sender = DEVICE_IP[rng.choice([w for w in STAFF.values() if w != ws])]
+            out.append(ev(at, "email", user, sender, DEVICE_IP["SRV-MAIL01"],
+                          "SRV-MAIL01", "email_received", None))
         else:
             out.append(ev(at, "email", user, rng.choice(BENIGN_MAIL_IPS),
                           DEVICE_IP["SRV-MAIL01"], "SRV-MAIL01", "email_received", None))
+
+    if noisy and rng.random() < NOISE["uac"]:  # installs or updates something
+        at = t + timedelta(seconds=rng.randint(60, span))
+        out.append(ev(at, "windows", user, ip, None, ws, "privilege_change",
+                      rng.choice(["consent.exe", "msiexec.exe"])))
 
     out.append(ev(leave, "windows", user, ip, None, ws, "logoff", None))
     return out
 
 
-def admin_day(rng, day):
+def admin_day(rng, day, noisy=False):
     """Admin work deliberately resembles attack steps (PowerShell, RDP, SMB,
     elevation) so that detection downstream is not trivial."""
     user, ws, ip = ADMIN_USER, ADMIN_WS, DEVICE_IP[ADMIN_WS]
@@ -192,8 +252,11 @@ def admin_day(rng, day):
         at = arrive + timedelta(seconds=rng.randint(60, span))
         kind = rng.choices(["local", "rdp", "smb", "elevate"], weights=[40, 25, 15, 20])[0]
         if kind == "local":
-            proc = rng.choice(["powershell.exe", "cmd.exe", "mmc.exe", "systeminfo.exe",
-                               "schtasks.exe", "whoami.exe"])
+            tools = ["powershell.exe", "cmd.exe", "mmc.exe", "systeminfo.exe",
+                     "schtasks.exe", "whoami.exe"]
+            if noisy:  # the administrator also reads mail and spreadsheets
+                tools += ["outlook.exe", "excel.exe", "winword.exe"]
+            proc = rng.choice(tools)
             out.append(ev(at, "windows", user, ip, None, ws, "process_execution", proc))
         elif kind == "rdp":
             srv = rng.choice(SERVERS + ["SRV-MAIL01"])
@@ -233,15 +296,35 @@ def backup_night(rng, day):
     return out
 
 
-def benign_events(rng):
+def server_day(rng, day):
+    """Legitimate outbound traffic from servers (noisy profile): the mail
+    server delivers mail, every server checks for updates at night."""
+    out = []
+    mail_ip = DEVICE_IP["SRV-MAIL01"]
+    for _ in range(rng.randint(15, 25)):
+        at = day + timedelta(seconds=rng.randint(7 * 3600, 20 * 3600))
+        out.append(ev(at, "firewall", MAIL_USER, mail_ip, rng.choice(BENIGN_MAIL_IPS),
+                      "SRV-MAIL01", "network_connection", None))
+    for server in SERVERS + ["SRV-MAIL01"]:
+        at = day + timedelta(hours=3, seconds=rng.randint(0, 1800))
+        for _ in range(rng.randint(1, 2)):
+            out.append(ev(at, "firewall", SYSTEM_USER, DEVICE_IP[server], rng.choice(UPDATE_IPS),
+                          server, "network_connection", None))
+            at += timedelta(seconds=rng.randint(5, 60))
+    return out
+
+
+def benign_events(rng, noisy=False):
     out = []
     for d in range(NUM_DAYS):
         day = START_DAY + timedelta(days=d)
         out += backup_night(rng, day)
+        if noisy:
+            out += server_day(rng, day)
         if day.weekday() < 5:
             for user, ws in STAFF.items():
-                out += staff_day(rng, day, user, ws)
-            out += admin_day(rng, day)
+                out += staff_day(rng, day, user, ws, noisy)
+            out += admin_day(rng, day, noisy)
     return out
 
 
@@ -334,16 +417,25 @@ def step_events(rng, tech, ctx, t):
     return out, t
 
 
-def build_incident(rng, pattern, variant):
+def attacker_ip(rng):
+    """An address used by one incident only (noisy profile)."""
+    return f"{rng.choice(['203.0.113', '198.51.100'])}.{rng.randint(1, 254)}"
+
+
+def build_incident(rng, pattern, variant, noisy=False):
     """One attack instance at a random time, as a list of labelled events."""
     seq, skipped, inserted = apply_variant(rng, pattern, variant)
 
-    user = rng.choice(list(STAFF))
+    desks = {**STAFF, ADMIN_USER: ADMIN_WS} if noisy else STAFF  # the admin can be a victim
+    user = rng.choice(list(desks))
     if pattern == "D":  # brute force hits whatever is reachable
-        host = rng.choice(list(STAFF.values()) + ["SRV-FILE01", "SRV-DB01"])
+        host = rng.choice(list(desks.values()) + ["SRV-FILE01", "SRV-DB01"])
     else:
-        host = STAFF[user]
-    ext_ip, exfil_ip = rng.sample(ATTACKER_IPS, 2)
+        host = desks[user]
+    if noisy:
+        ext_ip, exfil_ip = attacker_ip(rng), attacker_ip(rng)
+    else:
+        ext_ip, exfil_ip = rng.sample(ATTACKER_IPS, 2)
     ctx = {"user": user, "host": host, "ext_ip": ext_ip, "exfil_ip": exfil_ip}
 
     if pattern == "B":  # needs the victim at their desk to open the attachment
@@ -362,6 +454,7 @@ def build_incident(rng, pattern, variant):
         t += timedelta(seconds=gap)
 
     return {
+        "ext_ip": ext_ip, "exfil_ip": exfil_ip,
         "pattern": pattern, "variant": variant, "skipped": skipped,
         "inserted": inserted, "pace": "slow" if slow else "fast",
         "techniques": seq, "events": events,
@@ -379,7 +472,7 @@ def overlaps(a, b, margin=timedelta(hours=3)):
     return bool(ents(a) & ents(b))
 
 
-def attack_incidents(rng):
+def attack_incidents(rng, noisy=False):
     plan = []
     for pattern in sorted(PATTERNS):
         variants = list(VARIANT_PLAN)
@@ -389,9 +482,12 @@ def attack_incidents(rng):
 
     incidents = []
     for pattern, variant in plan:
+        used = {e[k] for other in incidents for e in other["events"]
+                for k in ("source_ip", "destination_ip")}
         while True:
-            inc = build_incident(rng, pattern, variant)
-            if not any(overlaps(inc, other) for other in incidents):
+            inc = build_incident(rng, pattern, variant, noisy)
+            fresh = not noisy or not ({inc["ext_ip"], inc["exfil_ip"]} & used)
+            if fresh and not any(overlaps(inc, other) for other in incidents):
                 break
         incidents.append(inc)
 
@@ -409,10 +505,11 @@ def iso(ts):
     return ts.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def assemble(seed):
+def assemble(seed, profile="noisy"):
+    noisy = profile == "noisy"
     rng = random.Random(seed)
-    benign = benign_events(rng)
-    incidents = attack_incidents(rng)
+    benign = benign_events(rng, noisy)
+    incidents = attack_incidents(rng, noisy)
 
     everything = list(benign)
     for inc in incidents:
@@ -531,10 +628,11 @@ def main():
     here = Path(__file__).resolve().parent
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--profile", choices=["noisy", "clean"], default="noisy")
     parser.add_argument("--out-dir", type=Path, default=here.parent / "processed")
     args = parser.parse_args()
 
-    events, labels, truth = assemble(args.seed)
+    events, labels, truth = assemble(args.seed, args.profile)
     validate(events, labels, truth)
     checked = validate_against_attack(here.parent / "mitre" / "techniques.json")
 
@@ -543,6 +641,7 @@ def main():
     write_json(args.out_dir / "labels.json", labels)
     write_json(args.out_dir / "incidents.json", truth)
 
+    print(f"profile: {args.profile}   seed: {args.seed}")
     summarize(events, labels, truth)
     print(f"\ntechniques checked against MITRE ATT&CK data: {'yes' if checked else 'no (data/mitre/techniques.json missing)'}")
     print(f"wrote events.json, labels.json, incidents.json to {args.out_dir}")

@@ -1,0 +1,51 @@
+mapped 281 of 3629 events -> /Users/rohitkathir/Desktop/virux-cypher/data/processed/mapped.json
+
+rules:
+  T1110           logon_failure inside a burst: >= 5 failures from one source address to one host within 10 minutes
+  T1078           logon_success whose source address is external
+  T1204.002       Office application started, and the same user runs a script host or dumper on that host within 60 minutes
+  T1566.001       the last external e-mail the user received in the 60 minutes before a T1204.002 event
+  T1068           privilege_change outside an expected administrator session
+  T1021.001       rdp_session outside an expected administrator or service session
+  T1021.002       smb_session outside an expected administrator or service session
+  T1005           file_access performed with a copy tool (robocopy, xcopy) outside an expected service session
+  T1041           outbound connection to an external address that has logged in before, or any outbound external connection from a server
+  (process table) process_execution of a dual-use tool outside an expected administrator or service session: powershell.exe -> T1059.001, cmd.exe -> T1059.003, procdump.exe -> T1003.001, rundll32.exe -> T1218.011, systeminfo.exe -> T1082, whoami.exe -> T1033, tree.com -> T1083, schtasks.exe -> T1053.005, wevtutil.exe -> T1685.005, 7z.exe -> T1560.001
+=== ATT&CK mapper vs labels.json (exact technique id) ===
+events: 3629   labelled attack events: 276   events the mapper mapped: 281
+
+technique    support    tp    fp    fn    prec  recall      f1
+T1003.001          6     4     0     2   1.000   0.667   0.800
+T1005             19    19     0     0   1.000   1.000   1.000
+T1021.001         12    12     0     0   1.000   1.000   1.000
+T1021.002          4     4     0     0   1.000   1.000   1.000
+T1033              0     0     3     0   0.000   0.000   0.000
+T1041             23    23     0     0   1.000   1.000   1.000
+T1053.005          2     2     0     0   1.000   1.000   1.000
+T1059.001         32    32     0     0   1.000   1.000   1.000
+T1059.003          0     0     5     0   0.000   0.000   0.000
+T1068             10    10     0     0   1.000   1.000   1.000
+T1078             18    18     0     0   1.000   1.000   1.000
+T1082              4     1     0     3   1.000   0.250   0.400
+T1083             13     8     0     5   1.000   0.615   0.762
+T1110            120   120     0     0   1.000   1.000   1.000
+T1204.002          6     6     3     0   0.667   1.000   0.800
+T1218.011          0     0     2     0   0.000   0.000   0.000
+T1566.001          6     6     2     0   0.750   1.000   0.857
+T1685.005          1     1     0     0   1.000   1.000   1.000
+micro                                    0.947   0.964   0.955
+macro                                    0.961   0.902   0.908
+detection                                0.982   1.000   0.991
+
+micro     = over all events, exact technique
+macro     = unweighted mean over the labelled techniques
+detection = event flagged with any technique vs labelled as attack
+
+confusion (true -> mapped), errors only:
+  T1083       -> T1059.003       5
+  T1082       -> T1033           3
+  benign      -> T1204.002       3
+  T1003.001   -> T1218.011       2
+  benign      -> T1566.001       2
+
+with sub-techniques folded into parents: micro precision 0.947  recall 0.964  f1 0.955

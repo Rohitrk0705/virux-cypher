@@ -1,0 +1,92 @@
+[
+ {
+  "id": "TA0043",
+  "name": "Reconnaissance",
+  "order": 0,
+  "shortname": "reconnaissance"
+ },
+ {
+  "id": "TA0042",
+  "name": "Resource Development",
+  "order": 1,
+  "shortname": "resource-development"
+ },
+ {
+  "id": "TA0001",
+  "name": "Initial Access",
+  "order": 2,
+  "shortname": "initial-access"
+ },
+ {
+  "id": "TA0002",
+  "name": "Execution",
+  "order": 3,
+  "shortname": "execution"
+ },
+ {
+  "id": "TA0003",
+  "name": "Persistence",
+  "order": 4,
+  "shortname": "persistence"
+ },
+ {
+  "id": "TA0004",
+  "name": "Privilege Escalation",
+  "order": 5,
+  "shortname": "privilege-escalation"
+ },
+ {
+  "id": "TA0005",
+  "name": "Stealth",
+  "order": 6,
+  "shortname": "stealth"
+ },
+ {
+  "id": "TA0112",
+  "name": "Defense Impairment",
+  "order": 7,
+  "shortname": "defense-impairment"
+ },
+ {
+  "id": "TA0006",
+  "name": "Credential Access",
+  "order": 8,
+  "shortname": "credential-access"
+ },
+ {
+  "id": "TA0007",
+  "name": "Discovery",
+  "order": 9,
+  "shortname": "discovery"
+ },
+ {
+  "id": "TA0008",
+  "name": "Lateral Movement",
+  "order": 10,
+  "shortname": "lateral-movement"
+ },
+ {
+  "id": "TA0009",
+  "name": "Collection",
+  "order": 11,
+  "shortname": "collection"
+ },
+ {
+  "id": "TA0011",
+  "name": "Command and Control",
+  "order": 12,
+  "shortname": "command-and-control"
+ },
+ {
+  "id": "TA0010",
+  "name": "Exfiltration",
+  "order": 13,
+  "shortname": "exfiltration"
+ },
+ {
+  "id": "TA0040",
+  "name": "Impact",
+  "order": 14,
+  "shortname": "impact"
+ }
+]

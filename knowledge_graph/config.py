@@ -48,5 +48,8 @@ ROUTINE_PROCESSES = [
 ]
 
 # What the rest of the system (trajectory extraction, agent tools, API) reads.
-DEFAULT_METHOD = METHOD_HEURISTIC
-DEFAULT_TECHNIQUE_SOURCE = SOURCE_GROUND_TRUTH
+# Both are label-free: incidents are grouped from the events the rule-based
+# mapper tagged, and techniques come from the mapper. Ground truth is only ever
+# an explicit opt-in for evaluation.
+DEFAULT_METHOD = METHOD_MAPPER
+DEFAULT_TECHNIQUE_SOURCE = SOURCE_MAPPER

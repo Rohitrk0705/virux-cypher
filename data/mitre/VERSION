@@ -1,0 +1,5 @@
+ATT&CK Enterprise v19.2
+source: https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json
+techniques: 697 (475 sub-techniques)
+groups: 176 (172 with at least one technique)
+tactics: 15

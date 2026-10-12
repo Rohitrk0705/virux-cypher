@@ -75,3 +75,68 @@ Core mechanics correct and captured output reproducible (stats, hubs, all sweep 
 | Weak leakage test | Fixed: query-text checks plus a test that heuristic output is identical with all mappings removed. |
 | Nits | Done: `collect()` comment, ORDER BY tie-break, `len(truth)`. **TODO:** non-atomic materialize, `INTERNAL_PREFIX` as a string prefix. |
 
+---
+
+## M3 — deterministic ATT&CK mapper
+
+Reviewed on the first mapper version, against the clean dataset.
+
+### Blocking
+
+**1. `evaluation/mapper_eval.py`, `evaluation/results/m3_mapper.txt`: the headline (micro P 0.947 / R 0.964 / F1 0.955) is a single-seed best case and is printed with no caveat.**
+- Seeds 1–12 scored with the unchanged mapper in memory: micro F1 mean 0.913 (range 0.886–0.948), P mean 0.905 (0.882–0.937), R mean 0.921 (0.888–0.960). Seed 42 beats all 12.
+- `7z.exe` is never drawn for T1005 at seed 42, so T1005 recall is 1.000; on other seeds it ranges 0.28–1.00 because the mapper sends `7z.exe` to T1560.001. Every T1041 destination happens to have logged in earlier; on other seeds T1041 recall ranges 0.79–1.00.
+- The mapper report has no limitations block and does not say that the rules and the generator share an author.
+- Fix: report mean/min/max over a fixed list of seeds and print a limitations block. Do not quote 0.955 alone.
+
+**2. `core/attack_mapper.py` (T1041 "address that has logged in before"): 15 of 23 T1041 true positives depend on attacker IPs being reused across incidents.**
+- All 23 hits fire the first sub-rule; only 8 of the 23 destinations logged in during the same incident. The other 15 match only because a different incident used that address earlier. The generator draws all attackers from 8 addresses.
+- Counterfactual with unique addresses per incident: T1041 recall 0.652; micro P 0.945 / R 0.935 / F1 0.940; detection recall 1.000 → 0.971.
+- The server fallback has zero false positives only because no benign server ever connects out.
+- Fix: scope the context, report the sub-rules separately, state the dependence; ideally stop reusing a tiny attacker pool and add benign server egress.
+
+**3. `core/attack_mapper.py`, `core/environment.py`: most rules reduce to "a non-admin did X", which separates perfectly only because of how the generator builds benign activity.**
+- Benign staff run only 7 applications; they never produce `smb_session`, `rdp_session` or `privilege_change`, and never a `file_access` with a process. T1068 fires on any non-admin `privilege_change`.
+- Counterfactuals (benign events edited, labels unchanged): 16 staff notepad launches turned into PowerShell/cmd → micro P 0.853, F1 0.905; 55 such launches → P 0.711; 10% of staff file-share accesses logged as `smb_session` → P 0.780, F1 0.862.
+- The allow-list costs nothing because the admin is never the victim; a locally compromised admin workstation yields zero mappings.
+- Fix: document as the dominant limitation, add benign noise to the generator (staff scripting, SMB, UAC, admin as victim), and re-report.
+
+### Should-fix
+
+- T1204.002 / T1566.001 look forward 60 minutes, which makes the mapper batch-only and is not in `DECISIONS.md`. Every Office launch in the hour before a script host is flagged; all mail in the dataset is external so "external" filters nothing. Tag only the nearest preceding Office launch.
+- Session state: one session per `(user, device)`, last writer wins; TTL runs from session start; `logoff` never clears state; an admin on a server more than 4 hours after RDP is flagged; an attacker on WS-07 from an external address becomes "expected" after 4 hours. None of it tested.
+- Macro average covers only the 15 labelled techniques, so false positives on never-labelled techniques are charged to no class (macro P 0.961 > micro P 0.947). Over all 18 classes macro is 0.801 / 0.752 / 0.757.
+- T1110 is 120 of 276 labelled events and trivially separable; without it micro is P 0.907 / R 0.936 / F1 0.921.
+- `DECISIONS.md` A2 is false for `7z.exe` at seed 42; A1 needs the caveat from Blocking 3; K8 is out of date.
+- `PROGRESS.md` has no M3 entry and its M2 table no longer matches the graph.
+- `data/mitre/fetch.py`: revoked chains are not resolved (three replacements are themselves not live).
+- Tests: none for the TTL, T1041, T1005, T1068 or several Office launches.
+
+### Nits
+
+- Process matching is exact and lower-case; a full path maps to nothing.
+- The burst key is `(source_ip, device)`, so spraying across hosts is missed.
+- `core/environment.py` duplicates `INTERNAL_PREFIX`.
+- `m3_mapper.txt` contains an absolute home path.
+- Group techniques come from direct `uses` only, not via software; document it.
+- The generator change and the M3 decisions are already in the M2 commit.
+
+### Reviewer verdict
+
+Clean, deterministic, contract-conformant, uses no labels, numbers reproduce. But 0.955 should not be trusted as an indicator of real-world performance: it is the best of 13 seeds, leans on attacker-IP reuse for 65% of its exfiltration hits, and nearly all its precision comes from the generator never letting ordinary staff do anything attack-like. Treat it as "the rules are implemented correctly against the author's own generator".
+
+### Resolution
+
+| Finding | Status |
+|---|---|
+| Blocking 1: single-seed headline | **Fixed.** `evaluation/mapper_eval.py` runs generator and mapper in memory for 13 seeds in both profiles and prints mean, standard deviation, min and max, a per-rule table, and a limitations block. |
+| Blocking 2: exfiltration rule depends on attacker-IP reuse | **Fixed.** The rule no longer uses any address seen in an earlier logon. It now needs an outbound connection to a destination new to the organisation plus either a server source or off-hours. Contract 1 has no bytes or ports, so volume and port could not be used; a repeat-connection proxy for volume was tried and removed (20 true vs 909 false positives over 13 seeds). The noisy generator gives every incident its own attacker addresses and adds benign server egress. |
+| Blocking 3: benign data too clean | **Fixed in the data, not in the rules.** The generator has a `noisy` profile (now the default): staff scripting, SMB shares, UAC prompts, copy tools, home logons, one-off websites, lockouts, admin Office use, admin as a possible victim, internal mail, benign server egress, unique attacker addresses. The `clean` profile reproduces the first dataset byte-for-byte. Rules were not re-tuned against the noise, apart from T1078 (first logon from an address for that user) and the removal noted above. |
+| Forward-looking Office rule | Fixed: only the nearest preceding Office launch is tagged; recorded in `DECISIONS.md` A7. |
+| Session state | Partly fixed: TTL removed, `logoff` clears the session, tests added. **TODO:** one session per `(user, device)`. |
+| Macro average, T1110 weighting | Fixed: `macro_all` and "excluding T1110" are printed. |
+| Docs out of date | Fixed in this pass. |
+| Revoked chains | Fixed. |
+| Tests | Added for T1041, T1005, T1068, T1078, logoff, several Office launches, process paths. |
+| Nits | Done: process path/case, relative path in output. **TODO:** burst key misses spraying; duplicated `INTERNAL_PREFIX`. |
+
