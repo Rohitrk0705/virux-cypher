@@ -29,21 +29,23 @@ def reset():
 REQUIRED = ["event_id", "timestamp", "source", "user", "source_ip", "device", "action"]
 
 
-def load_events(events):
+def load_events(events, runner=None):
+    runner = runner or run
     for e in events:
         missing = [k for k in REQUIRED if e.get(k) is None]
         if missing:
             raise ValueError(f"event {e.get('event_id')!r} is missing required field(s) {missing}")
     for i in range(0, len(events), BATCH):
-        run("load_events", rows=events[i:i + BATCH])
-    run("mark_entities", internal_prefix=config.INTERNAL_PREFIX, hub_users=config.HUB_USERS)
+        runner("load_events", rows=events[i:i + BATCH])
+    runner("mark_entities", internal_prefix=config.INTERNAL_PREFIX, hub_users=config.HUB_USERS)
 
 
-def load_mappings(mappings, source):
+def load_mappings(mappings, source, runner=None):
     """Replace all MAPS_TO edges of one source with the given contract-2 rows."""
-    run("clear_mappings", source=source)
+    runner = runner or run
+    runner("clear_mappings", source=source)
     for i in range(0, len(mappings), BATCH):
-        run("load_mappings", rows=mappings[i:i + BATCH], source=source)
+        runner("load_mappings", rows=mappings[i:i + BATCH], source=source)
 
 
 def load_files(events_file=None, labels_file=None, mapped_file=None):

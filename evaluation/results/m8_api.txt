@@ -1,0 +1,124 @@
+Responses from a running service (uvicorn api.main:app, bundled dataset).
+
+### GET /health
+{"status":"ok","service":"virux-cypher","neo4j":true,"events":3986,"incidents":53}
+
+### GET /incidents (first 2 of 53)
+[{"incident_id": "INC-00010", "start": "2026-09-07T03:01:28Z", "end": "2026-09-07T03:22:34Z", "event_count": 7}, {"incident_id": "INC-00017", "start": "2026-09-07T05:22:11Z", "end": "2026-09-07T05:53:32Z", "event_count": 21}]
+
+### GET /events/INC-03265 (first 2)
+7 events
+[{"event_id": "evt-03265", "timestamp": "2026-09-17T03:41:31Z", "source": "windows", "user": "elena", "source_ip": "203.0.113.120", "destination_ip": "10.0.0.14", "device": "WS-04", "action": "logon_success", "process": null}, {"event_id": "evt-03266", "timestamp": "2026-09-17T03:49:25Z", "source": "windows", "user": "elena", "source_ip": "10.0.0.14", "destination_ip": null, "device": "WS-04", "action": "process_execution", "process": "powershell.exe"}]
+
+### GET /trajectory/INC-03265
+{"incident_id":"INC-03265","techniques":[{"id":"T1078","timestamp":"2026-09-17T03:41:31Z"},{"id":"T1059.001","timestamp":"2026-09-17T03:49:25Z"},{"id":"T1068","timestamp":"2026-09-17T03:53:31Z"},{"id":"T1021.001","timestamp":"2026-09-17T04:03:10Z"},{"id":"T1041","timestamp":"2026-09-17T04:11:55Z"}]}
+
+### GET /match/INC-03265
+{"incident_id":"INC-03265","matches":[{"attack_id":"HIST-C03","similarity":1.0,"common_techniques":["T1078","T1059.001","T1068","T1021.001","T1041"]},{"attack_id":"HIST-C01","similarity":0.8,"common_techniques":["T1078","T1059.001","T1068","T1021.001"]},{"attack_id":"HIST-G0028","similarity":0.55,"common_techniques":["T1078","T1059.001","T1021.001"]},{"attack_id":"HIST-C08","similarity":0.325,"common_techniques":["T1059.001","T1041"]},{"attack_id":"HIST-C09","similarity":0.325,"common_techniques":["T1078","T1021.001"]}]}
+
+### GET /predict/INC-03265
+{"incident_id":"INC-03265","predictions":[],"evidence":["the last 1 step(s) T1041 occur 3 time(s) in 3 of 11 hand-specified historical trajectories","3 of those 3 were the last step of their trajectory","no continuation has been observed after this point, so no next step is predicted","the longer context T1021 > T1041 was seen 1 time(s), fewer than the 2 required, so it was not used","closest historical attack overall is HIST-C03 (similarity 1.0); not used for the probabilities"]}
+
+### GET /predict/INC-01743
+{"incident_id":"INC-01743","predictions":[{"technique_id":"T1021","probability":1.0}],"evidence":["the last 1 step(s) T1068 occur 2 time(s) in 2 of 11 hand-specified historical trajectories","2 of those 2 were followed by T1021","the longer context T1021 > T1068 was seen 0 time(s), fewer than the 2 required, so it was not used","the prediction uses the order of the observed steps","closest historical attack overall is HIST-C01 (similarity 0.9); not used for the probabilities"]}
+
+### GET /graph/INC-03265 (counts, one node of each type, three edges)
+25 nodes 46 edges
+{"id": "event:evt-03265", "type": "event", "label": "evt-03265", "timestamp": "2026-09-17T03:41:31Z", "action": "logon_success", "source": "windows"}
+{"id": "user:elena", "type": "user", "label": "elena"}
+{"id": "device:WS-04", "type": "device", "label": "WS-04"}
+{"id": "ip:10.0.0.14", "type": "ip", "label": "10.0.0.14", "internal": true}
+{"id": "technique:T1078", "type": "technique", "label": "T1078", "name": "Valid Accounts"}
+{"id": "tactic:Initial Access", "type": "tactic", "label": "Initial Access"}
+{"id": "process:powershell.exe", "type": "process", "label": "powershell.exe"}
+{"source": "event:evt-03265", "target": "ip:10.0.0.14", "type": "INVOLVES", "role": "destination"}
+{"source": "event:evt-03265", "target": "technique:T1078", "type": "MAPS_TO", "confidence": 0.6}
+{"source": "event:evt-03265", "target": "event:evt-03266", "type": "NEXT", "delta_seconds": 474}
+
+### GET /investigate/INC-03265
+{"incident_id": "INC-03265", "trajectory": {"incident_id": "INC-03265", "techniques": [{"id": "T1078", "timestamp": "2026-09-17T03:41:31Z"}, {"id": "T1059.001", "timestamp": "2026-09-17T03:49:25Z"}, {"id": "T1068", "timestamp": "2026-09-17T03:53:31Z"}, {"id": "T1021.001", "timestamp": "2026-09-17T04:03:10Z"}, {"id": "T1041", "timestamp": "2026-09-17T04:11:55Z"}]}, "event_summary": {"count": 7, "first": "2026-09-17T03:41:31Z", "last": "2026-09-17T04:14:51Z", "users": {"elena": 7}, "devices": {"SRV-DB01": 4, "WS-04": 3}, "actions": {"logon_success": 1, "network_connection": 3, "privilege_change": 1, "process_execution": 1, "rdp_session": 1}}, "historical_matches": {"incident_id": "INC-03265", "matches": [{"attack_id": "HIST-C03", "similarity": 1.0, "common_techniques": ["T1078", "T1059.001", "T1068", "T1021.001", "T1041"]}, {"attack_id": "HIST-C01", "similarity": 0.8, "common_techniques": ["T1078", "T1059.001", "T1068", "T1021.001"]}, {"attack_id": "HIST-G0028", "similarity": 0.55, "common_techniques": ["T1078", "T1059.001", "T1021.001"]}, {"attack_id": "HIST-C08", "similarity": 0.325, "common_techniques": ["T1059.001", "T1041"]}, {"attack_id": "HIST-C09", "similarity": 0.325, "common_techniques": ["T1078", "T1021.001"]}]}, "prediction": {"incident_id": "INC-03265", "predictions": [], "evidence": ["the last 1 step(s) T1041 occur 3 time(s) in 3 of 11 hand-specified historical trajectories", "3 of those 3 were the last step of their trajectory", "no continuation has been observed after this point, so no next step is predicted", "the longer context T1021 > T1041 was seen 1 time(s), fewer than the 2 required, so it was not used", "closest historical attack overall is HIST-C03 (similarity 1.0); not used for the probabilities"]}, "techniques": [{"id": "T1041", "name": "Exfiltration Over C2 Channel", "tactic": "Exfiltration", "description": "Adversaries may steal data by exfiltrating it over an existi...", "relation": "in_trajectory"}], "steps": [{"tool": "query_graph", "input": {"incident_id": "INC-03265"}, "ok": true, "summary": "5 technique step(s): T1078 > T1059.001 > T1068 > T1021.001 > T1041"}, {"tool": "get_events", "input": {"incident_id": "INC-03265"}, "ok": true, "summary": "7 event(s)"}, {"tool": "match_historical", "input": {"incident_id": "INC-03265"}, "ok": true, "summary": "top match HIST-C03 at 1.0"}, {"tool": "predict_next", "input": {"incident_id": "INC-03265"}, "ok": true, "summary": "no prediction"}, {"tool": "lookup_technique", "input": {"technique_id": "T1041"}, "ok": true, "summary": "T1041 Exfiltration Over C2 Channel"}], "agent": {"llm": "scripted-policy", "complete": true, "stop_reason": "end_turn", "tool_calls": 5, "failed_tool_calls": 0}, "agent_notes": "Trajectory, events and historical matches were collected and a next-step prediction was requested."}
+
+### GET /explain/INC-01743 (report text)
+{'incident_id': 'INC-01743', 'format': 'markdown', 'generated_by': 'template'}
+# Incident INC-01743
+
+## What was observed
+
+5 ATT&CK technique step(s), in time order:
+
+1. `T1078` Valid Accounts - from 2026-09-11T12:59:37Z
+2. `T1059.001` PowerShell - from 2026-09-11T13:08:14Z
+3. `T1068` Exploitation for Privilege Escalation - from 2026-09-11T13:11:10Z
+4. `T1021.001` Remote Desktop Protocol - from 2026-09-11T13:18:55Z
+5. `T1068` Exploitation for Privilege Escalation - from 2026-09-11T13:34:07Z
+
+Each step is a run of consecutive events with the same technique; the time is when that run began. A technique can appear in more than one step.
+
+The incident groups 6 event(s) between 2026-09-11T12:59:37Z and 2026-09-11T13:34:07Z.
+
+- Accounts: marcus (6)
+- Hosts: SRV-DC01 (1), WS-03 (5)
+- Event types: logon\_success (1), privilege\_change (2), process\_execution (2), rdp\_session (1)
+
+## Similar past attacks
+
+| Historical attack | Similarity | Techniques in common |
+|---|---|---|
+| `HIST-C01` Stolen-credential intrusion with privilege escalation and RDP lateral movement (hand-written reference sequence) | 0.9 | T1078, T1059.001, T1068, T1021.001 |
+| `HIST-C03` Stolen-credential intrusion ending in exfiltration over the C2 channel (hand-written reference sequence) | 0.8 | T1078, T1059.001, T1068, T1021.001 |
+| `HIST-G0028` Threat Group-1314 (MITRE ATT&CK group, order inferred) | 0.6 | T1078, T1059.001, T1021.001 |
+
+## Likely next step
+
+| Technique | Probability |
+|---|---|
+| `T1021` Remote Services | 1.0 |
+
+Basis:
+- the last 1 step(s) T1068 occur 2 time(s) in 2 of 11 hand-specified historical trajectories
+- 2 of those 2 were followed by T1021
+- the longer context T1021 > T1068 was seen 0 time(s), fewer than the 2 required, so it was not used
+- the prediction uses the order of the observed steps
+- closest historical attack overall is HIST-C01 (similarity 0.9); not used for the probabilities
+
+## How this was produced
+
+1. `query_graph` - 5 technique step(s): T1078 > T1059.001 > T1068 > T1021.001 > T1068
+2. `get_events` - 6 event(s)
+3. `match_historical` - top match HIST-C01 at 0.9
+4. `predict_next` - top prediction T1021 at 1.0
+5. `lookup_technique` - T1021 Remote Services
+
+Investigation complete; 5 tool call(s), 0 failed; tool selection by `scripted-policy`.
+
+Agent's note (commentary, not a finding):
+
+> Trajectory, events and historical matches were collected and a next-step prediction was requested.
+
+## Limits of this report
+
+- Techniques are assigned by a rule-based mapper, which produces false positives and misses (see docs/PROGRESS.md for measured accuracy).
+- Similarity compares complete technique sequences; an attack still in progress scores low against its own reference.
+- Probabilities are ratios of counts over a small set of hand-written historical sequences. They are not calibrated likelihoods.
+
+### GET /technique/T1070.001 (revoked id)
+{"id":"T1685.005","name":"Clear Windows Event Logs","tactic":"Defense Impairment","description":"Adversaries may clear Windows Event Logs to hide the activity of an intrusion. Windows Event Logs are a
+
+
+### GET /trajectory/INC-nope
+{"detail":"no incident 'INC-nope'"} [HTTP 404]
+
+### POST /logs, missing fields
+{"detail":"0.timestamp: Field required; 0.source: Field required; 0.user: Field required; 0.source_ip: Field required; 0.destination_ip: Field required (+3 more)"} [HTTP 422]
+
+### POST /logs, impossible date
+{"detail":"0.timestamp: Value error, not a real UTC date and time"} [HTTP 422]
+
+### POST /logs, year 0000
+{"detail":"0.timestamp: Value error, not a real UTC date and time"} [HTTP 422]
+
+### GET /health afterwards
+{"status":"ok","service":"virux-cypher","neo4j":true,"events":3986,"incidents":53}
+
+### openapi paths
+['/events/{id}', '/explain/{id}', '/graph/{id}', '/health', '/incidents', '/investigate/{id}', '/logs', '/match/{id}', '/predict/{id}', '/technique/{technique_id}', '/trajectory/{id}']

@@ -211,3 +211,19 @@ Built: `agents/tools/` (the five tools, typed against the contracts), `agents/co
 - Tests: 26 in `tests/test_agents.py`, including mock models that supply their own trajectory, put a false claim in an extra argument, invent tool names, never stop, flood one turn with calls, or crash mid-run.
 
 Review: 1 Blocking (fixed: model-written strings could reach the step log), 11 Should-fix (all addressed).
+
+## M8 — FastAPI endpoints, Agents 1 and 3 — done
+
+Built: `backend/api/main.py` and `schemas.py` (eleven endpoints, Pydantic models mirroring the five contracts), `agents/log_agent/` (Agent 1: deterministic ingest), `agents/explanation_agent/` (Agent 3: template report), `backend/README.md` (endpoint documentation for the frontend team). Real responses from a running service: `evaluation/results/m8_api.txt`.
+
+- All eight endpoints you listed return real data, plus `/health`, `/incidents` and `/technique/{technique_id}`. The service starts with `cd backend && uvicorn api.main:app`.
+- On the bundled dataset: 53 incidents served; contracts 1, 3, 4 and 5 verified field-for-field by the reviewer across all 53.
+- `POST /logs` is one transaction (events, mappings and incidents commit together); a one-event ingest took 0.2 s on this machine.
+- No authentication (optional `API_TOKEN` for `POST /logs`), no pagination, no raw-log parsing.
+
+Review: 6 Blocking (all fixed; five were in `POST /logs` and `/health`, one was a false "first seen" in the report), 9 Should-fix (8 fixed, 1 partly).
+
+TODOs carried forward:
+- No request byte limit; every ingest re-maps the whole graph; an ingest can change which hosts count as hubs and so regroup existing incidents.
+- The ingest lock is per process; run a single worker.
+- `/docs` needs internet access (Swagger UI from a CDN).

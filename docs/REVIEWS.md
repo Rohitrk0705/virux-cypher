@@ -323,3 +323,52 @@ Reviewer verified: the five tools match `docs/agent-tools.md` in name, signature
 | 12 | Fixed: tests added for each case. |
 | Nits | Done, except the old `LLM_API_KEY` line, which is from the original skeleton and was left. |
 
+---
+
+## M8 — FastAPI endpoints, Agents 1 and 3
+
+What passed: the service starts both ways (`uvicorn api.main:app` from `backend/`, `uvicorn backend.api.main:app` from the root) with byte-identical responses; across all 53 incidents `/events`, `/trajectory`, `/match` and `/predict` matched contracts 1, 3, 4 and 5 exactly, and the Pydantic models match `docs/data-contracts.md`; `/graph` had unique node ids, no dangling or duplicate edges and complete, ordered NEXT edges; `/investigate` bundles matched the documented keys and agreed with the direct endpoints; odd ids (URL-encoded, 60,000 characters, NUL, emoji, quote injection) all returned 404; all Cypher is parameterised; the README numbers checked out. The reviewer restored the graph after testing (3,986 events, 53 incidents; a hash over all nodes and relationships was identical before and after the test suite).
+
+### Blocking
+
+- **B1. One event with a year-0000 timestamp returned 500 and permanently broke ingest.** The timestamp was validated by regex only; Neo4j stored it and the next read of all events raised.
+- **B2. Ingest was not atomic.** Events were written in 1,000-row transactions before mapping and inference; a failure in the 1,001st left 1,000 events in the graph with mappings and incidents not refreshed.
+- **B3. Invalid dates and over-long strings returned a false 503 "Neo4j is not available"** while `/health` reported Neo4j up.
+- **B4. `/health` reported `neo4j: false` whenever there were zero default incidents**, because the query returned no row. Seen in 81 of about 4,000 polls during ingests.
+- **B5. `/explain` said "first seen" for a timestamp that is the start of a run**, which is false when a technique repeats (4 of 53 bundled incidents).
+- **B6. An `event_id` without `-` would be reported as 404 and leave ingest broken** (by code reading): the incident-id derivation raised `IndexError`, and the handler turned every `LookupError` into a 404.
+
+### Should-fix
+
+1. GET endpoints returned wrong 200s while an ingest was rebuilding (`/incidents` empty 87 times, valid ids 404 about 80 times) because clear and rewrite were separate transactions.
+2. Incident ids containing `/` were unreachable.
+3. Incident id collisions (`evt-00138` and `x-00138` both gave `INC-00138`) would silently merge.
+4. Markdown/HTML injection into the report through user and device names and through multi-line agent notes.
+5. Report wording contradicted the bundle on tool failure ("No prediction was requested" when `predict_next` had failed; "Investigation complete" with a failed call).
+6. A large or hostile body degrades the service; no byte limit and no auth on `POST /logs`.
+7. README inaccuracies and gaps (`/events` carries no technique id; `/incidents` ordered by id string; error shapes; degraded health shape; no auth or pagination stated; `/technique` can return another id; Cytoscape id selectors).
+8. Driver errors other than `ServiceUnavailable` surfaced as plain-text 500; `OSError` was mislabelled as a database outage.
+9. Test gaps: cleanup used an address range the dataset also uses; one incident exercised; no tests for upsert, bad dates or the blocking cases.
+
+### Nits
+
+- Possible duplicate edges if an event ever had two techniques; empty strings accepted for nullable fields; inconsistent 404 text echoing the full id; every hand-written record called "reference sequence"; `--reload` scope; `/docs` needs a CDN; the lock does not span several worker processes.
+
+### Resolution
+
+| Finding | Status |
+|---|---|
+| B1, B3 | **Fixed.** Timestamps are parsed as real UTC dates between 1970 and 2100; every string is 1-256 characters with no control characters; `event_id` is limited to URL-safe characters. All are 422 with a string `detail`. Only driver connection errors map to 503. |
+| B2 and Should-fix 1 | **Fixed.** An ingest is one database transaction covering the events, the refreshed mappings and the refreshed incidents. A test makes the mapper raise mid-ingest and checks nothing changed. Readers see the old state until commit. |
+| B4 | **Fixed.** Two separate counts; a test checks `status: ok` with zero incidents. |
+| B5 | **Fixed.** The report says "from <time>" and explains that a step is a run of consecutive events. |
+| B6 and Should-fix 3 | **Fixed.** A dedicated `NotFound` exception is the only thing mapped to 404 (a test checks a stray `IndexError` is a 500). Ids without the `evt-` prefix are used whole; a collision of incident ids is rejected with 422 rather than merged. |
+| 2 | Fixed by the `event_id` character rule. |
+| 4 | Fixed: log-derived values and the agent's note are Markdown-escaped; each note line is quoted. README tells the frontend to render with raw HTML disabled. |
+| 5 | Fixed: wording is derived from the step log. |
+| 6 | Partly fixed: string caps, 5,000 events per request, optional `API_TOKEN`. **TODO:** no request byte limit; every ingest re-maps the whole graph; `mark_entities` can change hub status and re-partition existing incidents. |
+| 7 | Fixed in `backend/README.md`. |
+| 8 | Fixed: `DriverError` → 503; everything else → JSON 500 with the cause logged. |
+| 9 | Fixed: tests use an unused address range and cover upsert, bad input (16 cases), rollback, token, non-`evt-` ids. |
+| Nits | Edge de-duplication, empty strings, 404 text and record labels fixed. **TODO:** single-process lock; `/docs` CDN. |
+

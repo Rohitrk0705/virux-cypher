@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 
 from knowledge_graph import config
-from knowledge_graph.connection import run
+from knowledge_graph.connection import NotFound, run
 
 
 def iso(epoch_seconds):
@@ -29,12 +29,12 @@ def get_trajectory(incident_id, method=None, technique_source=None, via_next=Fal
     Raw events stay in the graph, so counts and durations per technique remain
     available to evidence queries. via_next=True orders by walking NEXT edges
     instead of sorting on the timestamp; both give the same result.
-    Raises LookupError for an unknown incident; an incident with no mapped
+    Raises NotFound (a LookupError) for an unknown incident; an incident with no mapped
     technique returns an empty techniques list.
     """
     method = method or config.DEFAULT_METHOD
     if not run("incident_exists", incident_id=incident_id, method=method)[0]["n"]:
-        raise LookupError(f"no incident {incident_id!r} for method {method!r}")
+        raise NotFound(f"no incident {incident_id!r}")
     rows = run(
         "trajectory_via_next" if via_next else "trajectory",
         incident_id=incident_id,

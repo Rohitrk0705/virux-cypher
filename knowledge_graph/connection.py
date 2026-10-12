@@ -1,5 +1,6 @@
 """Neo4j connection and Cypher file loading."""
 
+from contextlib import contextmanager
 from functools import lru_cache
 from pathlib import Path
 
@@ -30,6 +31,29 @@ def run(name, **params):
     """Run a named query file and return its records as a list of dicts."""
     result = get_driver().execute_query(load_query(name), parameters_=params)
     return [record.data() for record in result.records]
+
+
+@contextmanager
+def transaction():
+    """One write transaction. Yields run(name, **params) with the same interface
+    as the module-level run(); everything commits together or not at all, and
+    readers keep seeing the previous state until the commit."""
+    with get_driver().session() as session:
+        tx = session.begin_transaction()
+
+        def tx_run(name, **params):
+            return [record.data() for record in tx.run(load_query(name), params)]
+
+        try:
+            yield tx_run
+            tx.commit()
+        except BaseException:
+            tx.rollback()
+            raise
+
+
+class NotFound(LookupError):
+    """An incident or technique that does not exist (HTTP 404 at the API)."""
 
 
 def run_text(cypher, **params):

@@ -9,13 +9,14 @@ which tool to call and explain the results; they never compute a finding.
   predict_next(trajectory)       -> Prediction                (contract 5)
   lookup_technique(technique_id) -> {id, name, tactic, description}
 
-An unknown incident or technique raises LookupError.
+An unknown incident or technique raises NotFound (a LookupError).
 """
 
 import json
 from functools import lru_cache
 from pathlib import Path
 
+from knowledge_graph.connection import NotFound
 from prediction import markov, similarity
 from temporal import incidents
 from temporal.trajectory import get_trajectory, iso
@@ -62,7 +63,7 @@ def lookup_technique(technique_id: str) -> TechniqueInfo:
     resolved = revoked.get(technique_id, technique_id)
     entry = techniques.get(resolved)
     if entry is None:
-        raise LookupError(f"unknown ATT&CK technique {technique_id!r}")
+        raise NotFound(f"unknown ATT&CK technique {technique_id!r}")
     return {
         "id": entry["id"],
         "name": entry["name"],

@@ -88,3 +88,16 @@ One line each: what was decided and why. Newest milestone last.
 | T5 | Limits: 8 model turns and 20 tool calls per investigation. | Bounds cost and Neo4j load whatever the model does. |
 | T6 | `lookup_technique` returns all tactics of a technique as one comma-separated string and resolves revoked ids. | The tool contract has a single `tactic` field; several techniques have more than one tactic. |
 | T7 | The Claude adapter uses model `claude-opus-5-5` with default thinking and effort, and does not enable server-side refusal fallbacks. | Could not be verified without credentials, so only the plain documented call is used. Worth revisiting when a key is available. |
+
+## M8 — API, Agent 1 and Agent 3
+
+| # | Decision | Rationale |
+|---|---|---|
+| B1 | Three endpoints beyond your list: `GET /health`, `GET /incidents`, `GET /technique/{technique_id}`. | A frontend cannot discover incident ids or technique names without them. |
+| B2 | `/graph/{id}` returns `{incident_id, nodes, edges}` with typed, prefixed node ids. | Not one of the five contracts; shaped for Cytoscape.js, which the README names as the frontend graph library. |
+| B3 | `POST /logs` accepts Normalized Events only, not raw log lines. | Raw-log parsing (the OntoLogX part of the architecture) is not built; the endpoint is honest about what it takes. |
+| B4 | Agent 1 is deterministic: store, re-map everything with the rule mapper, re-infer incidents, in one transaction. | The mapper needs the whole event stream (bursts, session state); a transaction keeps readers consistent. |
+| B5 | Agent 3 is a template, not a language model. | A template cannot misstate the evidence. An LLM-written report is a later option on top of the same bundle. |
+| B6 | `POST /logs` validation is stricter than contract 1's wording: bounded lengths, URL-safe `event_id`, real dates 1970-2100, no control characters. | Contract 1 fixes field names and types; these bounds protect the graph and the URLs. The bundled dataset satisfies all of them. |
+| B7 | Optional `API_TOKEN` for `POST /logs`; reads are open; no pagination. | Enough for a demo without adding an auth system. Stated in the README. |
+| B8 | `/investigate` and `/explain` re-run the agent on every call; nothing is cached. | Deterministic and fast on this data (tens of milliseconds); caching would need invalidation on ingest. |

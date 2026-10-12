@@ -326,3 +326,52 @@ def test_real_incident_end_to_end(graph):
     assert bundle["event_summary"]["count"] == len(tools.get_events(incident_id))
     with pytest.raises(LookupError):
         investigate("INC-nope")
+
+
+# ---------------------------------------------------------------- Agent 3 (explanation)
+
+def bundle_for(llm=None, toolset=None):
+    return investigate("INC-1", llm=llm or ScriptedLLM(), toolset=toolset or fake_tools())
+
+
+def test_report_says_from_not_first_seen_and_matches_the_bundle():
+    from agents.explanation_agent import explain
+    bundle = bundle_for()
+    report = explain(bundle)["report"]
+    assert "first seen" not in report
+    for step in bundle["trajectory"]["techniques"]:
+        assert f"`{step['id']}`" in report and f"from {step['timestamp']}" in report
+    top = bundle["historical_matches"]["matches"][0]
+    assert top["attack_id"] in report and "hand-written reference sequence" in report
+    assert "Investigation complete; 5 tool call(s), 0 failed" in report
+
+
+def test_report_wording_follows_tool_failures():
+    from agents.explanation_agent import explain
+
+    def broken(trajectory):
+        raise LookupError("gone")
+
+    report = explain(bundle_for(toolset={**fake_tools(), "predict_next": broken}))["report"]
+    assert "The prediction tool failed" in report and "No prediction was requested" not in report
+    assert "finished, but with failed tool calls" in report
+    idle = explain(bundle_for(llm=Script(Decision(text="All clear."))))["report"]
+    assert "was not requested" in idle and "INCOMPLETE" in idle
+
+
+def test_report_escapes_values_from_the_logs_and_from_the_model():
+    from agents.explanation_agent import explain
+    hostile = [{**EVENTS[0], "user": "<img src=x onerror=alert(1)>|x\n\n# Injected heading",
+                "device": "[click](javascript:alert(1))"}]
+    toolset = {**fake_tools(), "get_events": lambda incident_id: hostile}
+    llm = Script([("query_graph", {"incident_id": "INC-1"})], [("get_events", {"incident_id": "INC-1"})],
+                 Decision(text="line one\n<script>alert(2)</script>\n# Not a heading"))
+    report = explain(bundle_for(llm=llm, toolset=toolset))["report"]
+    import re as _re
+    assert "img src" in report and "script" in report                     # the text is kept, defused
+    assert not _re.search(r"(?<!\\)[<>\[\]|]", report.split("Accounts:")[1].split("Event types:")[0])
+    assert not _re.search(r"(?<!\\)<", report.split("commentary, not a finding):")[1].split("## Limits")[0])
+    headings = [line for line in report.splitlines() if line.startswith("#")]
+    assert all("Injected" not in h and "Not a heading" not in h for h in headings)
+    note = report.split("commentary, not a finding):")[1].split("## Limits")[0]
+    assert all(line.startswith("> ") for line in note.splitlines() if line.strip())

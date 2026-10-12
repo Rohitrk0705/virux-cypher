@@ -29,6 +29,7 @@ from dataclasses import dataclass, field
 from typing import Protocol
 
 from agents import tools
+from knowledge_graph.connection import NotFound
 
 MAX_STEPS = 8          # model turns
 MAX_TOOL_CALLS = 20    # tool executions per investigation
@@ -254,7 +255,7 @@ def investigate(incident_id, llm=None, max_steps=MAX_STEPS, toolset=None, max_to
     not exist. A failure of the language model does not raise: the evidence
     gathered so far is returned with agent.complete = False."""
     if toolset is None and not tools.incident_exists(incident_id):
-        raise LookupError(f"no incident {incident_id!r}")
+        raise NotFound(f"no incident {incident_id!r}")
     work = Investigation(incident_id, toolset)
     llm = llm or default_llm()
 
@@ -370,7 +371,7 @@ class ScriptedLLM:
         if "predict_next" not in seen:
             return (f"No historical match reached the strong-match level ({STRONG_MATCH}), "
                     "so no next-step prediction was requested.")
-        return "Trajectory, events, historical matches and a next-step prediction were collected."
+        return "Trajectory, events and historical matches were collected and a next-step prediction was requested."
 
 
 class AnthropicLLM:
