@@ -199,3 +199,38 @@ class Report(Contract):
     format: Literal["markdown"]
     generated_by: str
     report: str
+    sections: list[str]
+    summary: str
+    steps: list[AgentStep]
+    agent: AgentStatus
+
+
+class RecordGroup(Contract):
+    group_id: str
+    detected_format: str
+    count: int
+    parser: str | None
+    parsed: int
+    rejected: dict[str, int]
+    status: Literal["parsed", "nothing parsed", "quarantined", "unhandled"]
+
+
+class IngestReport(Contract):
+    """Agent 1's account of one batch of raw log records."""
+    received: int
+    parsed: int
+    rejected: int
+    quarantined: int
+    unhandled: int
+    groups: list[RecordGroup]
+    stored: bool
+    events: list[NormalizedEvent]
+    techniques: list[AttackTechnique]
+    ingest: IngestResult | None
+    steps: list[AgentStep]
+    agent: AgentStatus
+    agent_notes: str
+
+
+# One raw log record: a line of text, or the JSON object such a line holds.
+RawRecord = Annotated[str, Field(min_length=1, max_length=8192)] | dict

@@ -37,13 +37,14 @@ mappings and incidents for everyone). Set `API_TOKEN` in the environment to requ
 | `GET /health` | service status, number of events and incidents | `{status, service, neo4j, events, incidents}` |
 | `GET /incidents` | all inferred incidents, oldest first | `[{incident_id, start, end, event_count}]` |
 | `POST /logs` | ingest events, re-map, re-infer incidents | body: `[Normalized Event]`; response below |
+| `POST /logs/raw` | runs Agent 1 on raw log records | body: `[string or object]`; Ingest Report, see below |
 | `GET /events/{id}` | the incident's events in time order | `[Normalized Event]` (contract 1) |
 | `GET /graph/{id}` | nodes and edges for a graph view | `{incident_id, nodes, edges}` |
 | `GET /trajectory/{id}` | ordered ATT&CK techniques | Attack Trajectory (contract 3) |
 | `GET /match/{id}` | most similar historical attacks | Historical Match (contract 4) |
 | `GET /predict/{id}` | most probable next techniques | Prediction (contract 5) |
 | `GET /investigate/{id}` | runs Agent 2 | Structured Evidence Bundle |
-| `GET /explain/{id}` | runs Agent 2 then Agent 3 | `{incident_id, format, generated_by, report}` |
+| `GET /explain/{id}` | runs Agent 2 then Agent 3 | `{incident_id, format, generated_by, report, sections, summary, steps, agent}` |
 | `GET /technique/{technique_id}` | ATT&CK technique details | `{id, name, tactic, description}` |
 
 Errors always have the shape `{"detail": "<string>"}`:
@@ -118,6 +119,38 @@ requests keep seeing the previous state until then. If anything fails, nothing c
 every event in the graph (about 0.2 s for the bundled 3,986 events on the development machine); ingests run one at a time. Raw, un-normalized log
 lines are not accepted.
 
+### `POST /logs/raw`
+
+Body: a JSON array of 1 to 5,000 raw records. A record is a log line (string, at most 8,192 characters) or
+the JSON object such a line holds. Agent 1 groups them by format, runs a parser per group, and stores what
+parses. Formats: Windows Security events as winlogbeat JSON (4624, 4625, 4634, 4647, 4663, 4673, 4688, 5140,
+5145), a firewall `key=value` line, a mail-gateway `key=value` line, and contract-1 JSON (details and the
+field mapping: `agents/log_agent/parsers.py`). `data/generator/raw_logs.py` writes the synthetic dataset
+in these formats.
+
+A request that is accepted answers `200` with an Ingest Report, also when records were rejected or
+nothing could be stored (`401`, `422` and `503` as for the other endpoints). Illustrative example, not a
+captured response; a real one is in `evaluation/results/e2e_example.txt`:
+
+```json
+{"received": 3, "parsed": 2, "rejected": 0, "quarantined": 1, "unhandled": 0,
+ "groups": [{"group_id": "g1", "detected_format": "firewall_kv", "count": 2, "parser": "firewall_kv",
+             "parsed": 2, "rejected": {}, "status": "parsed"},
+            {"group_id": "g2", "detected_format": "unknown", "count": 1, "parser": null,
+             "parsed": 0, "rejected": {}, "status": "quarantined"}],
+ "stored": true,
+ "events": ["... the stored Normalized Events (contract 1)"],
+ "techniques": ["... their Attack Technique rows (contract 2); most events have none"],
+ "ingest": {"received": 2, "events_in_graph": 3988, "mapped_events": 399, "incidents": 51, "incidents_touched": []},
+ "steps": ["... one entry per tool call"],
+ "agent": {"llm": "scripted-policy", "complete": true, "stop_reason": "end_turn", "tool_calls": 4, "failed_tool_calls": 0},
+ "agent_notes": "..."}
+```
+
+`stored` is `false` (and `events` empty, `ingest` null) when nothing could be parsed. Records of an unknown
+format are quarantined, never guessed at; records a parser cannot complete are counted under `rejected` by
+reason. Like `POST /logs` it honours `API_TOKEN` and re-infers incidents.
+
 ### `GET /graph/{id}`
 
 ```json
@@ -167,6 +200,9 @@ directly if you want a prediction regardless.
 ### `GET /explain/{id}`
 
 `report` is Markdown with the sections: What was observed, Similar past attacks, Likely next step,
-How this was produced, Limits of this report. It is generated from a template; no language model writes it.
+How this was produced, Limits of this report. Agent 3 places the sections (`sections` is the order used) and
+each is rendered from the evidence by code. With the default offline policy the order is fixed, `summary`
+is `"none"` and `generated_by` is `"template"`. `steps` and `agent` describe Agent 3's own run.
+The escaping does not neutralise bare URLs, which a Markdown renderer with autolinking turns into links.
 Values that come from logs (user, device and action names) and the agent's note are Markdown-escaped, but
 render the report with raw HTML disabled all the same.

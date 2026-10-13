@@ -2,7 +2,8 @@
 
 The agent runs a loop: a language model (or the offline scripted policy)
 chooses which deterministic tool to call next, the tool runs, and its result is
-fed back. When the model stops, the Structured Evidence Bundle is assembled
+fed back (the loop itself is agents/loop.py, shared by the three agents). When
+the model stops, the Structured Evidence Bundle is assembled
 from the tool results alone. The model's own text is kept under `agent_notes`
 as commentary; it is never the source of a finding.
 
@@ -23,12 +24,10 @@ never been run against the real API: no credentials were available.
 """
 
 import json
-import os
 import re
-from dataclasses import dataclass, field
-from typing import Protocol
 
-from agents import tools
+from agents import loop, tools
+from agents.loop import LLM, AnthropicLLM, Decision, ToolCall, ToolError, run_loop  # noqa: F401 - re-exported
 from knowledge_graph.connection import NotFound
 
 MAX_STEPS = 8          # model turns
@@ -68,37 +67,6 @@ TOOL_SPECS = [
                       "properties": {"technique_id": {"type": "string", "description": "e.g. T1021 or T1059.001"}}},
      "description": "Return the name, tactic and description of an ATT&CK technique."},
 ]
-
-
-@dataclass
-class ToolCall:
-    id: str
-    name: str
-    input: dict
-
-
-@dataclass
-class Decision:
-    """What the model wants next: tool calls, or nothing (it is done)."""
-    tool_calls: list = field(default_factory=list)
-    text: str = ""
-    content: object = None      # assistant content to append to the conversation
-    stop_reason: str = "end_turn"
-
-
-class LLM(Protocol):
-    name: str
-
-    def decide(self, system: str, messages: list, tool_specs: list) -> Decision: ...
-
-
-class ToolError(Exception):
-    """A tool call that cannot be run. `code` is a fixed string that is safe to
-    store in the evidence bundle; `detail` goes back to the model only."""
-
-    def __init__(self, code, detail=None):
-        super().__init__(detail or code)
-        self.code = code
 
 
 # ----------------------------------------------------------------------------
@@ -259,46 +227,9 @@ def investigate(incident_id, llm=None, max_steps=MAX_STEPS, toolset=None, max_to
     work = Investigation(incident_id, toolset)
     llm = llm or default_llm()
 
-    messages = [{"role": "user", "content": f"Investigate incident {incident_id} and report."}]
-    notes, model_stopped, stop_reason = "", False, "max_steps"
-    for _ in range(max_steps):
-        try:
-            decision = llm.decide(SYSTEM_PROMPT, messages, TOOL_SPECS)
-        except Exception as exc:  # noqa: BLE001 - an API or model failure must not lose the evidence
-            stop_reason = f"model_error: {type(exc).__name__}"
-            break
-        if not isinstance(decision, Decision):
-            stop_reason = "invalid_model_response"
-            break
-        if not decision.tool_calls:
-            notes = decision.text if isinstance(decision.text, str) else ""
-            model_stopped, stop_reason = decision.stop_reason == "end_turn", str(decision.stop_reason)
-            break
-
-        calls, ids = [], set()
-        for call in decision.tool_calls:   # one result per distinct call id
-            call_id = getattr(call, "id", None)
-            if isinstance(call_id, str) and call_id not in ids:
-                ids.add(call_id)
-                calls.append(call)
-        content = decision.content or [
-            {"type": "tool_use", "id": c.id, "name": str(getattr(c, "name", "")),
-             "input": c.input if isinstance(getattr(c, "input", None), dict) else {}} for c in calls]
-        messages.append({"role": "assistant", "content": content})
-        results = []
-        for call in calls:
-            if len(work.steps) >= max_tool_calls:
-                result, error = {"error": "tool call budget for this investigation is used up"}, True
-            else:
-                result, error = work.run(call)
-            block = {"type": "tool_result", "tool_use_id": call.id, "content": json.dumps(result)}
-            if error:
-                block["is_error"] = True
-            results.append(block)
-        messages.append({"role": "user", "content": results})   # all results in one message
-        if len(work.steps) >= max_tool_calls:
-            stop_reason = "max_tool_calls"
-            break
+    notes, model_stopped, stop_reason = run_loop(
+        llm, SYSTEM_PROMPT, f"Investigate incident {incident_id} and report.", TOOL_SPECS, work,
+        max_steps, max_tool_calls)
     return work.bundle(getattr(llm, "name", "unknown"), notes, model_stopped, stop_reason)
 
 
@@ -374,39 +305,7 @@ class ScriptedLLM:
         return "Trajectory, events and historical matches were collected and a next-step prediction was requested."
 
 
-class AnthropicLLM:
-    """Claude through the official Anthropic SDK (manual tool-use loop).
-
-    Used only when AGENT_LLM=anthropic. Requires `pip install anthropic` and
-    credentials (ANTHROPIC_API_KEY or an `ant auth login` profile). NOT exercised
-    by the test suite: no credentials were available when this was written.
-    Server-side refusal fallbacks are not enabled.
-    """
-
-    def __init__(self, model="claude-opus-5-5", max_tokens=16000):
-        import anthropic   # imported here so the rest of the system runs without the package
-
-        self.client = anthropic.Anthropic()
-        self.model, self.max_tokens = model, max_tokens
-        self.name = model
-
-    def decide(self, system, messages, tool_specs):
-        response = self.client.messages.create(
-            model=self.model, max_tokens=self.max_tokens, system=system,
-            tools=tool_specs, messages=messages)
-        text = "".join(block.text for block in response.content if block.type == "text")
-        if response.stop_reason != "tool_use":
-            # end_turn, or refusal / max_tokens / pause_turn: stop and report why
-            return Decision(text=text, stop_reason=response.stop_reason)
-        calls = [ToolCall(block.id, block.name, block.input)
-                 for block in response.content if block.type == "tool_use"]
-        return Decision(tool_calls=calls, text=text, content=response.content, stop_reason="tool_use")
-
-
 def default_llm():
     """ScriptedLLM unless AGENT_LLM=anthropic is set (that path is untested
-    against the real API; see AnthropicLLM)."""
-    if os.getenv("AGENT_LLM", "").lower() == "anthropic":
-        return AnthropicLLM()
-    return ScriptedLLM()
-
+    against the real API; see agents.loop.AnthropicLLM)."""
+    return loop.default_llm(ScriptedLLM())

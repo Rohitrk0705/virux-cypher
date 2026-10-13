@@ -106,6 +106,53 @@ class EvidenceBundle(TypedDict):
     agent_notes: str         # the model's own words; commentary, never a finding
 
 
+class IngestResult(TypedDict):
+    received: int
+    events_in_graph: int
+    mapped_events: int
+    incidents: int
+    incidents_touched: list[str]
+
+
+class RecordGroup(TypedDict):
+    group_id: str
+    detected_format: str     # a parser name, or "unknown"
+    count: int
+    parser: str | None       # the parser the agent ran on it
+    parsed: int
+    rejected: dict[str, int]  # fixed reason code -> records
+    status: str              # parsed | nothing parsed | quarantined | unhandled
+
+
+class IngestReport(TypedDict):
+    """What Agent 1 returns for one batch of raw log records."""
+    received: int
+    parsed: int
+    rejected: int
+    quarantined: int
+    unhandled: int
+    groups: list[RecordGroup]
+    stored: bool
+    events: list[NormalizedEvent]      # the events that were stored (empty if nothing was)
+    techniques: list[AttackTechnique]  # their ATT&CK mappings (contract 2)
+    ingest: IngestResult | None
+    steps: list[AgentStep]
+    agent: AgentStatus
+    agent_notes: str
+
+
+class Report(TypedDict):
+    """What Agent 3 returns for one evidence bundle."""
+    incident_id: str
+    format: str              # "markdown"
+    generated_by: str        # "template", or "template sections, summary by <model>"
+    report: str
+    sections: list[str]      # the order the sections were placed in
+    summary: str             # none | accepted | discarded: <reason code>
+    steps: list[AgentStep]
+    agent: AgentStatus
+
+
 class IncidentSummary(TypedDict):
     incident_id: str
     start: str

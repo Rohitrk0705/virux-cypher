@@ -460,3 +460,47 @@ M10's numbers are honest and reproducible: every recomputed ground-truth figure 
 | 1-10 | **TODO**, recorded in `PROGRESS.md`. Not applied: each changes a reported table or the dataset, and the figures quoted in PROGRESS now carry the reviewer's qualifications (3, 4, 6, 8) where they are quoted. The reviewer's own figures (59, 94, 46 / 78, five plans) are attributed to the reviewer and are not in any results file. |
 | 11 | **Fixed** in this commit and the final PROGRESS rewrite. |
 | Nits | TODO. |
+
+## Task 3 — Agents 1 and 3 as agent steps
+
+The reviewer compared the old and new modules in memory and attacked the new agents with its own mock policies, fake stores and fuzzed records; it did not write to the graph. Confirmed: Agent 2 returns equal bundles from the old and new module for 9 policies (the only loop difference is the wording of the budget error); offline reports are byte-identical to the previous template for all 51 incidents and 6 fake bundles; `POST /logs` is unchanged; the API schemas validate what the agents return; no reference to labels or ground-truth incidents in the new code; the round trip is 3,986 / 3,986 and is everywhere described as a software test. Under 15 hostile policies no policy-written value reached Agent 1's events, groups, steps, ingest result or the store; under 9, Agent 3's report always had exactly five sections with template bodies.
+
+### Blocking
+
+- **B1. Uncaught exceptions escape `parsers.parse()` and turn one hostile record into a 500 for the whole batch.** Reproduced through `POST /logs/raw`: `event_id` of `1e999`; `IpAddress` a list or dict; `dport=²` or a 5,000-digit number; timestamps at the edge of the calendar with an offset. Nothing was stored, but the good records in the batch were lost and the README's "always 200" was false.
+- **B2. `check_summary` does not deliver the guarantee stated in the docs and printed in the report.** Accepted although outside the evidence: lower-case or re-punctuated ids (`t1486`, `hist-g9999`, `INC 2`, `incident #2`); numbers the pattern could not see (`.97`, `conf97%`, `1e3`, `0x3e8`, `①②`); a technique Agent 2 had merely looked up (`lookup_technique("T1486")` let "This incident is T1486 ransomware." through, end to end); a match id below the top three, which the report does not show. Disclosed and so not counted: names in words, an evidence number reused in another role, verdicts without ids — "the largest practical risk, and they sit above the findings".
+
+### Should-fix
+
+1. The docstring said a wrong parser choice is always rejected. A line carrying two formats' keys is detected as `firewall_kv` but parses cleanly with `mail_kv` into a different event, and was stored.
+2. The model's call order decides which of two records with the same `event_id` in different groups is stored.
+3. "Two fields are derived" understates it: first `host.ip` entry taken as the host address (winlogbeat often lists link-local first); domain stripped from the user; process and device names normalised; source and destination roles assigned; duplicate keys in a key=value line last-wins; non-ASCII digits accepted.
+4. Weak event mappings: 4673 -> `privilege_change` would mass-produce T1068 on real logs; 4663 -> `file_access` without the object type; logon type 3 -> `network_logon`, which nothing uses and nothing tests.
+5. `PROGRESS.md` contradicts the code (agents described as plain functions, raw parsing "not built", eleven endpoints).
+6. The README's example Ingest Report is not a real output (4 tool calls, not 5); "always 200" should list the other statuses.
+7. `md()` does not neutralise bare URLs (autolinks) or setext-heading lines inside the quoted summary.
+8. Test gaps: hostile record types, `check_summary` negatives, logon type 3 and 4647, parser mismatch, cross-group duplicates, dict records and oversized input through the API, a store that raises.
+
+### Nits
+
+- "26 tests" is 28; "moved unchanged" omits the changed budget string. The renderer's docstring lists three decorations but also invents logon types, `proto=tcp`, the host `fw01`, and puts every program under `System32`. Policies received the module-level `TOOL_SPECS` list itself. Dict records have no size or depth bound. `agent.llm` is taken from the policy object unvalidated. The contract-1 text pattern allows U+2028 and U+202E. A user name such as `john (99), admin` reads as two accounts (pre-existing). The 500 handler logs no traceback (pre-existing).
+
+### Reviewer verdict
+
+"Agent 1's core promise held under every hostile policy I tried. Agent 3's sections cannot be omitted, duplicated or altered. Agent 2 is unchanged, `POST /logs` is unchanged, the 51 reports are byte-identical, and there is no ground-truth leakage. Are Agents 1 and 3 now real agent steps? Structurally yes: same loop, validated tools, output assembled by code. But the decision space is very small. Agent 1 chooses one of four parsers for a group whose format the code has already detected; Agent 3 chooses section order and an optional summary. With the only policy that has ever run they behave exactly as the previous functions did, so they are correctly guarded agent boundaries, not demonstrated agents."
+
+### Resolution
+
+| Finding | Status |
+|---|---|
+| B1 | **Fixed.** `parse()` turns any non-`Reject` failure into `Reject("malformed record")`; numbers must be 1-15 ASCII digits; the event id must be an integer or digit string (`4624.9` is no longer 4624); a non-string `IpAddress` is rejected; calendar overflow is caught. Every case the reviewer listed is a test, which also checks the good record in the same batch is still stored. |
+| B2 | **Fixed by replacing the check.** After the ids and numbers the report itself shows are removed (trajectory, top three matches, predictions, counts), no digit of any Unicode kind may remain, and id-like words followed by a number are rejected. Looked-up techniques and matches below the top three are no longer accepted. All of the reviewer's bypasses are tests. The printed label now says what is not checked (wording, names, numbers in words). The disclosed residual risk stands and is in the docstring and DECISIONS A3-6. |
+| 1 | **Fixed.** For a group whose format was detected only that format's parser is accepted; the docstring states exactly what a misled model can still do. Tested. |
+| 3 | **Fixed** in part: the docstring lists every derivation; a key=value line with a repeated key is no longer parsed; non-ASCII digits are rejected. The first-`host.ip` choice is documented, not changed. |
+| 6 | **Fixed**: labelled illustrative, count corrected, statuses listed. |
+| 8 | Partly fixed: hostile records, summary negatives, parser mismatch and a refusing store are tested. |
+| 2, 4, 7, rest of 8 | **TODO** in `PROGRESS.md`. 4 is documented in the parser docstring. |
+| 5 | Fixed in the final PROGRESS rewrite. |
+| Nits | "26 tests", the budget string and the shared `TOOL_SPECS` list fixed; the rest TODO. |
+
+The fixes were not re-reviewed.

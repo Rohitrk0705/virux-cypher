@@ -83,7 +83,9 @@ def test_investigate_returns_a_bundle_consistent_with_the_other_endpoints(incide
 
 def test_explain_returns_a_markdown_report_built_from_the_bundle(incident):
     body = client.get(f"/explain/{incident}").json()
-    assert list(body) == ["incident_id", "format", "generated_by", "report"] and body["format"] == "markdown"
+    assert list(body) == ["incident_id", "format", "generated_by", "report", "sections", "summary", "steps",
+                          "agent"] and body["format"] == "markdown"
+    assert body["generated_by"] == "template" and body["summary"] == "none" and body["agent"]["complete"]
     report = body["report"]
     assert report.startswith(f"# Incident {incident}")
     for step in client.get(f"/trajectory/{incident}").json()["techniques"]:

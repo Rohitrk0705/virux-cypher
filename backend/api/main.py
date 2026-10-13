@@ -31,7 +31,7 @@ from neo4j.exceptions import DriverError  # noqa: E402
 from agents import tools  # noqa: E402
 from agents.explanation_agent import explain  # noqa: E402
 from agents.investigation_agent import investigate  # noqa: E402
-from agents.log_agent import ingest  # noqa: E402
+from agents.log_agent import ingest, process_logs  # noqa: E402
 from knowledge_graph import config  # noqa: E402
 from knowledge_graph.connection import NotFound, run_text  # noqa: E402
 from temporal.incidents import get_incident_graph  # noqa: E402
@@ -132,6 +132,16 @@ def post_logs(events: Annotated[list[schemas.NormalizedEvent],
         return ingest([e.model_dump() for e in events])
     except ValueError as exc:      # e.g. two incidents would get the same id
         raise HTTPException(status_code=422, detail=shorten(exc)) from None
+
+
+@app.post("/logs/raw", response_model=schemas.IngestReport, dependencies=[Depends(require_token)])
+def post_raw_logs(records: Annotated[list[schemas.RawRecord],
+                                     Body(min_length=1, max_length=MAX_EVENTS_PER_REQUEST)]):
+    """Run Agent 1 on raw log records (log lines, or the JSON objects they hold):
+    it picks a parser per group of records, stores the events that parse, maps
+    them to ATT&CK and re-infers incidents. Always answers 200 with a report;
+    `stored` is false when nothing could be parsed. Storing is one transaction."""
+    return process_logs(records)
 
 
 @app.get("/events/{id}", response_model=list[schemas.NormalizedEvent])
