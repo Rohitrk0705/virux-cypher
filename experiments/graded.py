@@ -262,7 +262,8 @@ def e1(truth, pipeline):
     def bin_row(cond, label):
         return next((g for g in graded if g["history"] == cond
                      and g["similarity of the nearest other template"] == label), None)
-    early = sum(r["Markov correct"] for r in by_position[:2])
+    step_gain = "; ".join(f"step {r['step being predicted']}: {r['Markov correct'] - r['frequency prior correct']:+d}"
+                          for r in by_position)
     hurt = [t for t in per_template if t["Markov correct"] < t["frequency prior correct"]]
     findings = [
         f"Reference points. Chance is {c['top1']:.3f}. A frequency prior built from the other 17 templates with all "
@@ -273,8 +274,8 @@ def e1(truth, pipeline):
         f"context: {other['correct']} of {other['instances']} (top-1 {other['top1']:.3f}, tie-aware "
         f"{other['top1_tie']:.3f}, top-3 {other['top3']:.3f}), {other['correct'] - base['correct']:+d} against the "
         "prior.",
-        f"Most of that gain is replay of entry sequences shared inside a family: {early} of the {other['correct']} "
-        f"correct predictions are of the 2nd or 3rd step. With every template of the incident's own family removed "
+        f"Where the gain over the prior comes from, by the step being predicted: {step_gain}. It is not "
+        f"concentrated in the entry steps. With every template of the incident's own family removed "
         f"from the history, the model gets {family_out['correct']} of {family_out['instances']} "
         f"({family_out['correct'] - base['correct']:+d} against the prior).",
         "By how similar the nearest other template is (Markov against the prior): " + "; ".join(
@@ -306,7 +307,7 @@ def e1(truth, pipeline):
     ]
     notes = [
         "What E1 supports: a Markov table built from related attacks in the same technique vocabulary predicts "
-        "the next step better than a context-free prior, mainly by replaying shared entry sequences. What it "
+        "the next step better than a context-free prior. What it "
         "does not support: that the benefit grows with similarity, or that independently written history "
         "(the real emulation plans) helps.",
         "The templates, their shared prefixes and the similarity between them were all designed by the author "

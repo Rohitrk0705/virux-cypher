@@ -448,7 +448,7 @@ Dataset: 17,707 events, 90 incidents from 18 templates (1 exact, 2 one-edit, 2 t
 | E3 pipeline | 14 / 24 | 30 / 78, equal to the baseline |
 
 **Does context help?**
-- **Historical: only in-vocabulary history that shares entry sequences with the attack.** 129 against 55 of 399; 80 of the 129 hits are the 2nd or 3rd step; with the own family removed the gain is +14. It does not grow steadily with similarity, and history hurts 3 templates (G12, G13, G16). **Real emulation plans do not help**: 29 / 399 alone, and they lower 129 to 116 when added.
+- **Historical: only in-vocabulary history written by the same author.** 129 against 55 of 399 (against 71 for the prior that never repeats a step). Gain over the prior by step predicted: +37, -2, +3, +12, +24, so it is not concentrated in the entry steps; with the own family removed the gain is +14. It does not grow steadily with similarity, and history hurts 3 templates (G12, G13, G16). **Real emulation plans do not help**: 29 / 399 alone, and they lower 129 to 116 when added. *(An earlier version of this bullet said the gain was mostly replay of entry sequences, citing 80 of 129 hits at steps 2-3; the review showed the prior already gets 45 of those 80.)*
 - **Temporal: order separates attacks with identical technique sets (by construction) and gives a modest top-1 gain (129 vs 108).** No matching gain elsewhere; second-order context adds nothing (order 1 alone: 135).
 - **E3:** unrelated attacks are recognised as novel (15 / 15), near relatives are not (4 / 15); known vs variant is close to arithmetic on edit count; nothing holds on the pipeline.
 

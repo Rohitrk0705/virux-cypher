@@ -419,3 +419,44 @@ The validation establishes that the adapter is faithful, that the contract was n
 
 The apt29 retry (`data/adapters/apt29.py`, `evaluation/real_data_apt29.py`) was written while this review was running and was **not** covered by it. It reuses the reviewed adapter's mapping rules; its numbers are in `evaluation/results/m9_real_data_apt29.txt`.
 
+
+## M10 — experiment redesign on the graded dataset
+
+**Two reviews.** The first review found 2 Blocking and 11 Should-fix items. Its text was lost when the session was cut off by a usage limit before it was copied here; only the fixes survive, in commit `26a905a` (dataset regenerated so two-edit instances need two edits in the generator's edit set; extra rows; per-step and per-template tables; held-out sensitivity; corrected labels and wording). It cannot be reproduced and is not quoted. The review below is a second, independent review of the committed state.
+
+The reviewer re-implemented the Markov back-off model, the frequency priors, the static predictor, the similarity score, the threshold fit and the leave-one-out in its own code, importing nothing from `experiments/`, `prediction/` or `evaluation/`, and reproduced every ground-truth figure: E1 55 / 71 / 129 / 166 / 29 / 69 of 399 and all by-step, per-template and by-instance rows; E2 matching 0 against 12 of 20 on the reordered pairs and 69 against 69 of 70 elsewhere, prediction 108 against 129; E3 60 / 78 and 38 / 78 with a majority baseline of 30, both confusion matrices and the 100-draw sensitivity table. It re-extracted the eight emulation plans from the raw YAML with a separate parser and got the committed file exactly. No leakage: history is only ever template references, never instances; own-template and own-family hold-outs and E3's held-out templates are implemented as described. Pipeline rows were not recomputed by the reviewer (the graph held the default dataset); the whole graded pipeline had been re-run the same day and was byte-identical to the committed output.
+
+### Blocking
+
+- **B1. "Most of that gain is replay of entry sequences" is contradicted by the by-step table in the same report** (`experiments/graded.py`, `e1.md`, the M10 bullet in `PROGRESS.md`). The sentence counted hits, not gain: the prior already gets 45 of the 80 hits at steps 2-3. Gain over the prior by step is +37, -2, +3, +12, +24 (sum +74); steps 2-3 give +35, steps 5 and later +36. With the own family removed the residual +14 is a late-step effect.
+
+### Should-fix
+
+1. "Two-edit instances need two edits" holds only in the generator's edit set (skip, insert, swap). 3 of 36 heavy instances (GT-014, GT-021, GT-054) are one substitution, at Levenshtein distance 1, the metric the similarity score uses; 15 of 36 light instances (swaps) are at Levenshtein 2. The test reuses the generator's own function, so it cannot catch this. E3's note "one edit gives 0.800-0.875; two edits give less" is not strictly true (variant maximum 0.812, known minimum 0.800).
+2. Two incidents with different labels are the same sequence (GT-020 from G12 and GT-057 from G01); GT-008 (G04, heavy) is one edit from G13 and three from G04. Caps E2 temporal matching on the reordered pairs; not disclosed.
+3. E2's "+21" (129 against 108) is partly tie-break luck: tie-aware expected hits are 123.3 against 114.8, about +8.5. On pipeline trajectories with the own template included, order is worse (108 against 122).
+4. E1's headline uses the weaker prior. Against the no-repeat prior (71) the gain is +58, not +74; family-out 69 is below 71, and +10 over a no-repeat prior built on the same family-out history (59, reviewer's computation).
+5. "Second-order context adds nothing" is nearly vacuous: with `MIN_SUPPORT = 2` and one copy of each reference, order 2 is used for 94 of 399 instances (reviewer's count).
+6. E3 thresholds are fitted leave-one-incident-out, so siblings of the tested incident set its thresholds. Leave-one-template-out (reviewer's code): order-aware stays 60 / 78, order-free becomes 46 / 78, so the gap is 14, not 22.
+7. E3 caveat "which six templates are held out was fixed before any result was computed and not varied": the sensitivity table varies it 100 times; "before any result" cannot be shown after the regeneration; the chosen set is below the median for both scores (60 against 66; 38 against 50).
+8. E3 pipeline rows no longer say how many incidents had no trajectory (3); they score 0.0 and are called novel. PROGRESS omits that order-free gets 40 / 78 on the pipeline, i.e. order-aware is worse there.
+9. "Three have no initial-access step" (E1 caveat) is not produced by code; by technique tactics the reviewer gets five plans. Same for "APT29 is two scenarios" and "FIN6 lists alternative end phases".
+10. Plans are fetched from `master`, not a pinned commit; the raw YAML is gitignored, so the committed JSON cannot be re-derived if upstream changes.
+11. Docs pending: no M10 entry here, DECISIONS X8 stale, PROGRESS summary stale.
+
+### Nits
+
+- G12's nearest-template similarity is exactly 0.700, on a bin edge; the chance row is uniform over 222 parents although the dataset uses 29 (1/29 = 0.034 would be tougher); `"incidents": 78` is hard-coded in the sensitivity rows; "median" is the upper median; the fetch regex would silently skip steps on a malformed file; `history()` rebuilds all conditions on every call; nothing tests the committed data files, the family hold-out or `end_to_end`, and the two-edit test is circular.
+
+### Reviewer verdict
+
+M10's numbers are honest and reproducible: every recomputed ground-truth figure matches, the hold-outs are implemented as described, no leakage was found, and the emulation plans file is a faithful extraction. It establishes that a Markov table over author-written sibling templates beats a context-free prior (129 against 55 or 71 of 399), that this does not grow with similarity, that real emulation plans do not help (29, and they lower 129 to 116), and that order separates same-set attacks only by construction. It does not establish that the gain is mostly entry-sequence replay. The temporal top-1 advantage is about 8 instances once ties are handled, and it reverses on pipeline input. E3's order-aware lead holds across hold-out choices on ground truth, but known-versus-variant is edit-count arithmetic with a slightly leaky edit definition, and nothing holds on the pipeline. Everything rests on one seed and templates designed by the author, which the reports say.
+
+### Resolution
+
+| Finding | Status |
+|---|---|
+| B1 | **Fixed.** The finding is now generated from gain per step ("step 2: +37; step 3: -2; step 4: +3; step 5: +12; step 6 or later: +24. It is not concentrated in the entry steps") and "mainly by replaying shared entry sequences" is removed from the E1 note. The graded pipeline was re-run; only those two sentences changed in `e1.md` and the captured output, no number moved. The PROGRESS bullet was reworded. |
+| 1-10 | **TODO**, recorded in `PROGRESS.md`. Not applied: each changes a reported table or the dataset, and the figures quoted in PROGRESS now carry the reviewer's qualifications (3, 4, 6, 8) where they are quoted. The reviewer's own figures (59, 94, 46 / 78, five plans) are attributed to the reviewer and are not in any results file. |
+| 11 | **Fixed** in this commit and the final PROGRESS rewrite. |
+| Nits | TODO. |
