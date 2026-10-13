@@ -1,0 +1,592 @@
+End-to-end smoke test: synthetic dataset, raw log lines in, analyst report out, all through the API.
+Produced by `python -m evaluation.e2e_smoke`. Dataset: data/processed/events.json (generator profile noisy, seed 42).
+All three agents ran with their offline scripted policy and no language model was called: every agent status in the responses (1 ingest, 51 investigations, 2 explanations) names `scripted-policy`.
+This shows that the pipeline runs. Two examples measure nothing; accuracy is in docs/PROGRESS.md.
+The raw lines were rendered from the synthetic events by data/generator/raw_logs.py, written by the author of the parsers, so parsing them back is a software check, not parsing accuracy.
+
+### 1. GET /health (graph wiped before the run)
+{
+ "status": "ok",
+ "service": "virux-cypher",
+ "neo4j": true,
+ "events": 0,
+ "incidents": 0
+}
+
+### 2. Ingest. POST /logs/raw (Agent 1, Log Intelligence)
+3986 raw log lines in one request. One line of each format, as sent:
+  {"@timestamp": "2026-09-07T01:00:57Z", "event": {"id": "evt-00001"}, "host": {"name": "SRV-FILE01", "ip": ["10.0.0.4"]}, "winlog": {"channel": "Security", "event_id": 4624, "event_data": {"TargetUserName": "svc_backup", "TargetDomainName": "BANK", "LogonType": "2", "IpAddress": "-"}}}
+  2026-09-07T03:01:28Z fw01 id=evt-00010 action=allow proto=tcp src=10.0.0.3 dst=192.0.2.200 dport=443 sent=6300 srcuser=system srchost=SRV-DB01
+  2026-09-07T08:35:44Z SRV-MAIL01 id=evt-00046 event=delivered client=10.0.0.11 rcpt=marcus@bank.example dst=10.0.0.5 dport=25
+
+Ingest Report (events and techniques lists summarised):
+{
+ "received": 3986,
+ "parsed": 3986,
+ "rejected": 0,
+ "quarantined": 0,
+ "unhandled": 0,
+ "groups": [
+  {
+   "group_id": "g1",
+   "detected_format": "windows_event_json",
+   "count": 2259,
+   "parser": "windows_event_json",
+   "parsed": 2259,
+   "rejected": {},
+   "status": "parsed"
+  },
+  {
+   "group_id": "g2",
+   "detected_format": "firewall_kv",
+   "count": 1436,
+   "parser": "firewall_kv",
+   "parsed": 1436,
+   "rejected": {},
+   "status": "parsed"
+  },
+  {
+   "group_id": "g3",
+   "detected_format": "mail_kv",
+   "count": 291,
+   "parser": "mail_kv",
+   "parsed": 291,
+   "rejected": {},
+   "status": "parsed"
+  }
+ ],
+ "stored": true,
+ "events": "<3986 Normalized Events>",
+ "techniques": "<399 Attack Technique rows>",
+ "ingest": {
+  "received": 3986,
+  "events_in_graph": 3986,
+  "mapped_events": 399,
+  "incidents": 51,
+  "incidents_touched": [
+   "INC-00017",
+   "INC-00299",
+   "INC-00404",
+   "INC-00600",
+   "INC-00620",
+   "INC-00654",
+   "INC-00664",
+   "INC-00696",
+   "INC-00807",
+   "INC-00857",
+   "INC-00943",
+   "INC-00976",
+   "INC-01103",
+   "INC-01108",
+   "INC-01215",
+   "INC-01229",
+   "INC-01534",
+   "INC-01555",
+   "INC-01557",
+   "INC-01571",
+   "INC-01609",
+   "INC-01743",
+   "INC-01781",
+   "INC-01857",
+   "INC-01953",
+   "INC-02004",
+   "INC-02038",
+   "INC-02061",
+   "INC-02068",
+   "INC-02074",
+   "INC-02076",
+   "INC-02203",
+   "INC-02387",
+   "INC-02539",
+   "INC-02669",
+   "INC-02696",
+   "INC-02820",
+   "INC-02860",
+   "INC-02989",
+   "INC-03194",
+   "INC-03265",
+   "INC-03299",
+   "INC-03405",
+   "INC-03406",
+   "INC-03618",
+   "INC-03684",
+   "INC-03769",
+   "INC-03823",
+   "INC-03863",
+   "INC-03936",
+   "INC-03963"
+  ]
+ },
+ "steps": [
+  {
+   "tool": "profile_batch",
+   "input": {},
+   "ok": true,
+   "summary": "3986 record(s) in 3 group(s): g1 windows_event_json x2259, g2 firewall_kv x1436, g3 mail_kv x291"
+  },
+  {
+   "tool": "parse_group",
+   "input": {
+    "group_id": "g1",
+    "parser": "windows_event_json"
+   },
+   "ok": true,
+   "summary": "g1 with windows_event_json: 2259 event(s), 0 rejected"
+  },
+  {
+   "tool": "parse_group",
+   "input": {
+    "group_id": "g2",
+    "parser": "firewall_kv"
+   },
+   "ok": true,
+   "summary": "g2 with firewall_kv: 1436 event(s), 0 rejected"
+  },
+  {
+   "tool": "parse_group",
+   "input": {
+    "group_id": "g3",
+    "parser": "mail_kv"
+   },
+   "ok": true,
+   "summary": "g3 with mail_kv: 291 event(s), 0 rejected"
+  },
+  {
+   "tool": "commit",
+   "input": {},
+   "ok": true,
+   "summary": "stored 3986 event(s); 399 event(s) in the graph are mapped to ATT&CK; 51 incident(s)"
+  }
+ ],
+ "agent": {
+  "llm": "scripted-policy",
+  "complete": true,
+  "stop_reason": "end_turn",
+  "tool_calls": 5,
+  "failed_tool_calls": 0
+ },
+ "agent_notes": "Every group of a known format was parsed with its own parser and the events were stored; groups of unknown format were set aside."
+}
+Stored events equal to data/processed/events.json, field for field (the report lists them grouped by format): True
+
+### 3. Graph. GET /health after the ingest
+{
+ "status": "ok",
+ "service": "virux-cypher",
+ "neo4j": true,
+ "events": 3986,
+ "incidents": 51
+}
+
+### 4. GET /incidents, then GET /investigate/{id} for every incident
+51 incidents inferred. Agent 2 completed 51 investigations; 51 have at least one technique step; 19 had a top historical similarity of 0.5 or more, so a prediction was requested; 16 of those got a non-empty prediction.
+Two examples follow. A is chosen by a rule that uses no ground truth: the earliest incident whose investigation ends with a non-empty prediction. B is chosen WITH ground truth, so that the file also holds a real attack: the earliest such incident that contains at least one true attack event (a weak criterion: it can be a fragment). Neither is typical; the breakdown of all such incidents is printed after the examples.
+
+====================================================================================================
+EXAMPLE A: INC-00299   [ground truth, shown in A9: FALSE ALARM]
+====================================================================================================
+### A1. GET /events/INC-00299
+3 events. Each as the raw line that was ingested, then as stored:
+  raw:    2026-09-07T15:23:12Z SRV-MAIL01 id=evt-00299 event=delivered client=192.0.2.111 rcpt=priya@bank.example dst=10.0.0.5 dport=25
+  stored: {"event_id": "evt-00299", "timestamp": "2026-09-07T15:23:12Z", "source": "email", "user": "priya", "source_ip": "192.0.2.111", "destination_ip": "10.0.0.5", "device": "SRV-MAIL01", "action": "email_received", "process": null, "destination_port": 25, "byte_count": null}
+  raw:    {"@timestamp": "2026-09-07T15:38:41Z", "event": {"id": "evt-00312"}, "host": {"name": "WS-02", "ip": ["10.0.0.12"]}, "winlog": {"channel": "Security", "event_id": 4688, "event_data": {"SubjectUserName": "BANK\\priya", "NewProcessName": "C:\\Windows\\System32\\excel.exe"}}}
+  stored: {"event_id": "evt-00312", "timestamp": "2026-09-07T15:38:41Z", "source": "windows", "user": "priya", "source_ip": "10.0.0.12", "destination_ip": null, "device": "WS-02", "action": "process_execution", "process": "excel.exe", "destination_port": null, "byte_count": null}
+  raw:    {"@timestamp": "2026-09-07T15:38:42Z", "event": {"id": "evt-00313"}, "host": {"name": "WS-02", "ip": ["10.0.0.12"]}, "winlog": {"channel": "Security", "event_id": 4688, "event_data": {"SubjectUserName": "BANK\\priya", "NewProcessName": "C:\\Windows\\System32\\cmd.exe"}}}
+  stored: {"event_id": "evt-00313", "timestamp": "2026-09-07T15:38:42Z", "source": "windows", "user": "priya", "source_ip": "10.0.0.12", "destination_ip": null, "device": "WS-02", "action": "process_execution", "process": "cmd.exe", "destination_port": null, "byte_count": null}
+
+### A2. Graph. GET /graph/INC-00299
+16 nodes (2 device, 3 event, 3 ip, 2 process, 2 tactic, 3 technique, 1 user), 20 edges
+Events mapped to a technique (MAPS_TO edges):
+  event:evt-00299 -> technique:T1566.001 (confidence 0.45)
+  event:evt-00312 -> technique:T1204.002 (confidence 0.55)
+  event:evt-00313 -> technique:T1059.003 (confidence 0.6)
+
+### A3. Trajectory. GET /trajectory/INC-00299
+{"incident_id": "INC-00299", "techniques": [{"id": "T1566.001", "timestamp": "2026-09-07T15:23:12Z"}, {"id": "T1204.002", "timestamp": "2026-09-07T15:38:41Z"}, {"id": "T1059.003", "timestamp": "2026-09-07T15:38:42Z"}]}
+
+### A4. Match. GET /match/INC-00299
+{"attack_id": "HIST-G0013", "similarity": 0.667, "common_techniques": ["T1566.001", "T1204.002"]}
+{"attack_id": "HIST-C02", "similarity": 0.6, "common_techniques": ["T1566.001", "T1204.002", "T1059.003"]}
+{"attack_id": "HIST-G0103", "similarity": 0.583, "common_techniques": ["T1566.001", "T1204.002"]}
+{"attack_id": "HIST-C04", "similarity": 0.5, "common_techniques": ["T1566.001", "T1204.002", "T1059.003"]}
+{"attack_id": "HIST-G0062", "similarity": 0.5, "common_techniques": ["T1566.001", "T1204.002", "T1059.003"]}
+
+### A5. Predict. GET /predict/INC-00299
+{
+ "incident_id": "INC-00299",
+ "predictions": [
+  {
+   "technique_id": "T1003",
+   "probability": 0.5
+  },
+  {
+   "technique_id": "T1547",
+   "probability": 0.5
+  }
+ ],
+ "evidence": [
+  "the last 2 step(s) T1204 > T1059 occur 2 time(s) in 2 of 11 hand-specified historical trajectories",
+  "1 of those 2 were followed by T1003",
+  "the prediction uses the order of the observed steps",
+  "closest historical attack overall is HIST-G0013 (similarity 0.667); not used for the probabilities"
+ ]
+}
+
+### A6. Agent 2 investigation. GET /investigate/INC-00299 (trajectory, matches and prediction are the same objects as above and are left out here; technique descriptions shortened)
+{
+ "incident_id": "INC-00299",
+ "event_summary": {
+  "count": 3,
+  "first": "2026-09-07T15:23:12Z",
+  "last": "2026-09-07T15:38:42Z",
+  "users": {
+   "priya": 3
+  },
+  "devices": {
+   "SRV-MAIL01": 1,
+   "WS-02": 2
+  },
+  "actions": {
+   "email_received": 1,
+   "process_execution": 2
+  }
+ },
+ "techniques": [
+  {
+   "id": "T1003",
+   "name": "OS Credential Dumping",
+   "tactic": "Credential Access",
+   "description": "Adversaries may attempt to dump credentials to obtain account login and credential material, normally in the form of a h...",
+   "relation": "predicted"
+  }
+ ],
+ "steps": [
+  {
+   "tool": "query_graph",
+   "input": {
+    "incident_id": "INC-00299"
+   },
+   "ok": true,
+   "summary": "3 technique step(s): T1566.001 > T1204.002 > T1059.003"
+  },
+  {
+   "tool": "get_events",
+   "input": {
+    "incident_id": "INC-00299"
+   },
+   "ok": true,
+   "summary": "3 event(s)"
+  },
+  {
+   "tool": "match_historical",
+   "input": {
+    "incident_id": "INC-00299"
+   },
+   "ok": true,
+   "summary": "top match HIST-G0013 at 0.667"
+  },
+  {
+   "tool": "predict_next",
+   "input": {
+    "incident_id": "INC-00299"
+   },
+   "ok": true,
+   "summary": "top prediction T1003 at 0.5"
+  },
+  {
+   "tool": "lookup_technique",
+   "input": {
+    "technique_id": "T1003"
+   },
+   "ok": true,
+   "summary": "T1003 OS Credential Dumping"
+  }
+ ],
+ "agent": {
+  "llm": "scripted-policy",
+  "complete": true,
+  "stop_reason": "end_turn",
+  "tool_calls": 5,
+  "failed_tool_calls": 0
+ },
+ "agent_notes": "Trajectory, events and historical matches were collected and a next-step prediction was requested."
+}
+
+Bundle's trajectory, matches and prediction equal to the three endpoints above: True
+
+### A7. Agent 3 explanation. GET /explain/INC-00299 (everything except the report text)
+{"incident_id": "INC-00299", "format": "markdown", "generated_by": "template", "sections": ["observed", "matches", "prediction", "method", "limits"], "summary": "none", "steps": [{"tool": "read_evidence", "input": {}, "ok": true, "summary": "evidence read"}, {"tool": "write_section", "input": {"section": "observed"}, "ok": true, "summary": "section observed written"}, {"tool": "write_section", "input": {"section": "matches"}, "ok": true, "summary": "section matches written"}, {"tool": "write_section", "input": {"section": "prediction"}, "ok": true, "summary": "section prediction written"}, {"tool": "write_section", "input": {"section": "method"}, "ok": true, "summary": "section method written"}, {"tool": "write_section", "input": {"section": "limits"}, "ok": true, "summary": "section limits written"}], "agent": {"llm": "scripted-policy", "complete": true, "stop_reason": "end_turn", "tool_calls": 6, "failed_tool_calls": 0}}
+
+### A8. The report text returned by /explain (its matches table shows the top three of the five matches in A4)
+# Incident INC-00299
+
+## What was observed
+
+3 ATT&CK technique step(s), in time order:
+
+1. `T1566.001` Spearphishing Attachment - from 2026-09-07T15:23:12Z
+2. `T1204.002` Malicious File - from 2026-09-07T15:38:41Z
+3. `T1059.003` Windows Command Shell - from 2026-09-07T15:38:42Z
+
+Each step is a run of consecutive events with the same technique; the time is when that run began. A technique can appear in more than one step.
+
+The incident groups 3 event(s) between 2026-09-07T15:23:12Z and 2026-09-07T15:38:42Z.
+
+- Accounts: priya (3)
+- Hosts: SRV-MAIL01 (1), WS-02 (2)
+- Event types: email\_received (1), process\_execution (2)
+
+## Similar past attacks
+
+| Historical attack | Similarity | Techniques in common |
+|---|---|---|
+| `HIST-G0013` APT30 (MITRE ATT&CK group, order inferred) | 0.667 | T1566.001, T1204.002 |
+| `HIST-C02` Spearphishing attachment to LSASS credential dumping and SMB lateral movement (hand-written reference sequence) | 0.6 | T1566.001, T1204.002, T1059.003 |
+| `HIST-G0103` Mofang (MITRE ATT&CK group, order inferred) | 0.583 | T1566.001, T1204.002 |
+
+## Likely next step
+
+| Technique | Probability |
+|---|---|
+| `T1003` OS Credential Dumping | 0.5 |
+| `T1547` Boot or Logon Autostart Execution | 0.5 |
+
+Basis:
+- the last 2 step(s) T1204 > T1059 occur 2 time(s) in 2 of 11 hand-specified historical trajectories
+- 1 of those 2 were followed by T1003
+- the prediction uses the order of the observed steps
+- closest historical attack overall is HIST-G0013 (similarity 0.667); not used for the probabilities
+
+## How this was produced
+
+1. `query_graph` - 3 technique step(s): T1566.001 > T1204.002 > T1059.003
+2. `get_events` - 3 event(s)
+3. `match_historical` - top match HIST-G0013 at 0.667
+4. `predict_next` - top prediction T1003 at 0.5
+5. `lookup_technique` - T1003 OS Credential Dumping
+
+Investigation complete; 5 tool call(s), 0 failed; tool selection by `scripted-policy`.
+
+Agent's note (commentary, not a finding):
+
+> Trajectory, events and historical matches were collected and a next-step prediction was requested.
+
+## Limits of this report
+
+- Techniques are assigned by a rule-based mapper, which produces false positives and misses (see docs/PROGRESS.md for measured accuracy).
+- Similarity compares complete technique sequences; an attack still in progress scores low against its own reference.
+- Probabilities are ratios of counts over a small set of hand-written historical sequences. They are not calibrated likelihoods.
+
+### A9. Ground truth for INC-00299 (read by this script only; the pipeline never sees it)
+This incident overlaps NO true attack. It is a false alarm: benign events that the rule-based mapper mapped to techniques. Its trajectory, matches and prediction describe an attack that did not happen.
+
+====================================================================================================
+EXAMPLE B: INC-00654   [ground truth, shown in B9: FRAGMENT, TOP PREDICTION EQUALS THE TRUE NEXT STEP]
+====================================================================================================
+### B1. GET /events/INC-00654
+2 events. Each as the raw line that was ingested, then as stored:
+  raw:    {"@timestamp": "2026-09-08T14:47:08Z", "event": {"id": "evt-00654"}, "host": {"name": "WS-02", "ip": ["10.0.0.12"]}, "winlog": {"channel": "Security", "event_id": 4673, "event_data": {"SubjectUserName": "BANK\\priya", "ProcessName": "C:\\Windows\\System32\\spoolsv.exe"}}}
+  stored: {"event_id": "evt-00654", "timestamp": "2026-09-08T14:47:08Z", "source": "windows", "user": "priya", "source_ip": "10.0.0.12", "destination_ip": null, "device": "WS-02", "action": "privilege_change", "process": "spoolsv.exe", "destination_port": null, "byte_count": null}
+  raw:    {"@timestamp": "2026-09-08T15:08:06Z", "event": {"id": "evt-00673"}, "host": {"name": "SRV-DB01", "ip": ["10.0.0.3"]}, "winlog": {"channel": "Security", "event_id": 4624, "event_data": {"TargetUserName": "priya", "TargetDomainName": "BANK", "LogonType": "10", "IpAddress": "10.0.0.12"}}}
+  stored: {"event_id": "evt-00673", "timestamp": "2026-09-08T15:08:06Z", "source": "windows", "user": "priya", "source_ip": "10.0.0.12", "destination_ip": "10.0.0.3", "device": "SRV-DB01", "action": "rdp_session", "process": null, "destination_port": 3389, "byte_count": null}
+
+### B2. Graph. GET /graph/INC-00654
+12 nodes (2 device, 2 event, 2 ip, 1 process, 2 tactic, 2 technique, 1 user), 13 edges
+Events mapped to a technique (MAPS_TO edges):
+  event:evt-00654 -> technique:T1068 (confidence 0.6)
+  event:evt-00673 -> technique:T1021.001 (confidence 0.75)
+
+### B3. Trajectory. GET /trajectory/INC-00654
+{"incident_id": "INC-00654", "techniques": [{"id": "T1068", "timestamp": "2026-09-08T14:47:08Z"}, {"id": "T1021.001", "timestamp": "2026-09-08T15:08:06Z"}]}
+
+### B4. Match. GET /match/INC-00654
+{"attack_id": "HIST-C01", "similarity": 0.5, "common_techniques": ["T1068", "T1021.001"]}
+{"attack_id": "HIST-C03", "similarity": 0.4, "common_techniques": ["T1068", "T1021.001"]}
+{"attack_id": "HIST-G0028", "similarity": 0.225, "common_techniques": ["T1021.001"]}
+{"attack_id": "HIST-C02", "similarity": 0.183, "common_techniques": ["T1021.001"]}
+{"attack_id": "HIST-C09", "similarity": 0.183, "common_techniques": ["T1021.001"]}
+
+### B5. Predict. GET /predict/INC-00654
+{
+ "incident_id": "INC-00654",
+ "predictions": [
+  {
+   "technique_id": "T1041",
+   "probability": 0.5
+  }
+ ],
+ "evidence": [
+  "the last 2 step(s) T1068 > T1021 occur 2 time(s) in 2 of 11 hand-specified historical trajectories",
+  "1 of those 2 were followed by T1041",
+  "1 of those 2 were the last step of their trajectory",
+  "the prediction uses the order of the observed steps",
+  "closest historical attack overall is HIST-C01 (similarity 0.5); not used for the probabilities"
+ ]
+}
+
+### B6. Agent 2 investigation. GET /investigate/INC-00654 (trajectory, matches and prediction are the same objects as above and are left out here; technique descriptions shortened)
+{
+ "incident_id": "INC-00654",
+ "event_summary": {
+  "count": 2,
+  "first": "2026-09-08T14:47:08Z",
+  "last": "2026-09-08T15:08:06Z",
+  "users": {
+   "priya": 2
+  },
+  "devices": {
+   "SRV-DB01": 1,
+   "WS-02": 1
+  },
+  "actions": {
+   "privilege_change": 1,
+   "rdp_session": 1
+  }
+ },
+ "techniques": [
+  {
+   "id": "T1041",
+   "name": "Exfiltration Over C2 Channel",
+   "tactic": "Exfiltration",
+   "description": "Adversaries may steal data by exfiltrating it over an existing command and control channel. Stolen data is encoded into ...",
+   "relation": "predicted"
+  }
+ ],
+ "steps": [
+  {
+   "tool": "query_graph",
+   "input": {
+    "incident_id": "INC-00654"
+   },
+   "ok": true,
+   "summary": "2 technique step(s): T1068 > T1021.001"
+  },
+  {
+   "tool": "get_events",
+   "input": {
+    "incident_id": "INC-00654"
+   },
+   "ok": true,
+   "summary": "2 event(s)"
+  },
+  {
+   "tool": "match_historical",
+   "input": {
+    "incident_id": "INC-00654"
+   },
+   "ok": true,
+   "summary": "top match HIST-C01 at 0.5"
+  },
+  {
+   "tool": "predict_next",
+   "input": {
+    "incident_id": "INC-00654"
+   },
+   "ok": true,
+   "summary": "top prediction T1041 at 0.5"
+  },
+  {
+   "tool": "lookup_technique",
+   "input": {
+    "technique_id": "T1041"
+   },
+   "ok": true,
+   "summary": "T1041 Exfiltration Over C2 Channel"
+  }
+ ],
+ "agent": {
+  "llm": "scripted-policy",
+  "complete": true,
+  "stop_reason": "end_turn",
+  "tool_calls": 5,
+  "failed_tool_calls": 0
+ },
+ "agent_notes": "Trajectory, events and historical matches were collected and a next-step prediction was requested."
+}
+
+Bundle's trajectory, matches and prediction equal to the three endpoints above: True
+
+### B7. Agent 3 explanation. GET /explain/INC-00654 (everything except the report text)
+{"incident_id": "INC-00654", "format": "markdown", "generated_by": "template", "sections": ["observed", "matches", "prediction", "method", "limits"], "summary": "none", "steps": [{"tool": "read_evidence", "input": {}, "ok": true, "summary": "evidence read"}, {"tool": "write_section", "input": {"section": "observed"}, "ok": true, "summary": "section observed written"}, {"tool": "write_section", "input": {"section": "matches"}, "ok": true, "summary": "section matches written"}, {"tool": "write_section", "input": {"section": "prediction"}, "ok": true, "summary": "section prediction written"}, {"tool": "write_section", "input": {"section": "method"}, "ok": true, "summary": "section method written"}, {"tool": "write_section", "input": {"section": "limits"}, "ok": true, "summary": "section limits written"}], "agent": {"llm": "scripted-policy", "complete": true, "stop_reason": "end_turn", "tool_calls": 6, "failed_tool_calls": 0}}
+
+### B8. The report text returned by /explain (its matches table shows the top three of the five matches in B4)
+# Incident INC-00654
+
+## What was observed
+
+2 ATT&CK technique step(s), in time order:
+
+1. `T1068` Exploitation for Privilege Escalation - from 2026-09-08T14:47:08Z
+2. `T1021.001` Remote Desktop Protocol - from 2026-09-08T15:08:06Z
+
+Each step is a run of consecutive events with the same technique; the time is when that run began. A technique can appear in more than one step.
+
+The incident groups 2 event(s) between 2026-09-08T14:47:08Z and 2026-09-08T15:08:06Z.
+
+- Accounts: priya (2)
+- Hosts: SRV-DB01 (1), WS-02 (1)
+- Event types: privilege\_change (1), rdp\_session (1)
+
+## Similar past attacks
+
+| Historical attack | Similarity | Techniques in common |
+|---|---|---|
+| `HIST-C01` Stolen-credential intrusion with privilege escalation and RDP lateral movement (hand-written reference sequence) | 0.5 | T1068, T1021.001 |
+| `HIST-C03` Stolen-credential intrusion ending in exfiltration over the C2 channel (hand-written reference sequence) | 0.4 | T1068, T1021.001 |
+| `HIST-G0028` Threat Group-1314 (MITRE ATT&CK group, order inferred) | 0.225 | T1021.001 |
+
+## Likely next step
+
+| Technique | Probability |
+|---|---|
+| `T1041` Exfiltration Over C2 Channel | 0.5 |
+
+Basis:
+- the last 2 step(s) T1068 > T1021 occur 2 time(s) in 2 of 11 hand-specified historical trajectories
+- 1 of those 2 were followed by T1041
+- 1 of those 2 were the last step of their trajectory
+- the prediction uses the order of the observed steps
+- closest historical attack overall is HIST-C01 (similarity 0.5); not used for the probabilities
+
+## How this was produced
+
+1. `query_graph` - 2 technique step(s): T1068 > T1021.001
+2. `get_events` - 2 event(s)
+3. `match_historical` - top match HIST-C01 at 0.5
+4. `predict_next` - top prediction T1041 at 0.5
+5. `lookup_technique` - T1041 Exfiltration Over C2 Channel
+
+Investigation complete; 5 tool call(s), 0 failed; tool selection by `scripted-policy`.
+
+Agent's note (commentary, not a finding):
+
+> Trajectory, events and historical matches were collected and a next-step prediction was requested.
+
+## Limits of this report
+
+- Techniques are assigned by a rule-based mapper, which produces false positives and misses (see docs/PROGRESS.md for measured accuracy).
+- Similarity compares complete technique sequences; an attack still in progress scores low against its own reference.
+- Probabilities are ratios of counts over a small set of hand-written historical sequences. They are not calibrated likelihoods.
+
+### B9. Ground truth for INC-00654 (read by this script only; the pipeline never sees it)
+Overlaps true incident GT-003 (pattern C, variant base, pace slow): 2 of its 8 events are in this incident; 0 of this incident's 2 events are not part of it.
+The pipeline split that true incident: its other events are in INC-00620, INC-00696; 1 of its events are in no inferred incident.
+True technique sequence:     T1078 > T1059.001 > T1068 > T1021.001 > T1041
+Pipeline trajectory:         T1068 > T1021.001
+The pipeline trajectory is a FRAGMENT of the true sequence, starting at true step 3 of 5. True next step: T1041. Top prediction: T1041.
+This agreement is NOT evidence of predictive skill: the true sequence is identical to historical record HIST-C03, which the predictor was built from, so the model is replaying a sequence it holds. The probability and the counts behind it are in the prediction's evidence lines above. Measured accuracy is in docs/PROGRESS.md.
+
+### 13. All inferred incidents against the ground truth (so that the examples are not read as typical)
+Of the 51 inferred incidents, 31 contain at least one true attack event and 20 contain none (there are 24 true incidents). 'Contains at least one' is a weak criterion: an incident can hold a small part of the attack, as example B does (B9).
+The 16 incidents with a non-empty prediction, by what the ground truth says:
+   3  complete sequence, no true next step: INC-00976, INC-02004, INC-03618
+   3  false alarm: INC-00299, INC-02387, INC-03823
+   1  fragment with nothing after it: INC-02074
+   2  fragment, top prediction equals the true next step: INC-00654, INC-02860
+   5  not a contiguous part of the true sequence: INC-01229, INC-01743, INC-02539, INC-02989, INC-03405
+   2  prefix, top prediction equals the true next step: INC-02068, INC-03769
+Only the 'prefix' and 'fragment' rows with a true next step can be compared with a prediction at all, and base-variant attacks are copies of sequences the predictor holds. This is a count of cases, not an accuracy figure.
+
+### 14. After the run
+The graph was rebuilt offline with `python -m knowledge_graph.build --reset` (default dataset; this also loads the ground-truth labels used by the evaluation scripts, which were absent during the API run).
+Incidents inferred through the API: 51; by the offline build: 51; same incident ids: True

@@ -504,3 +504,39 @@ The reviewer compared the old and new modules in memory and attacked the new age
 | Nits | "26 tests", the budget string and the shared `TOOL_SPECS` list fixed; the rest TODO. |
 
 The fixes were not re-reviewed.
+
+## End-to-end smoke test
+
+The reviewer recomputed, read-only against the rebuilt graph and `data/processed/`: 3,986 events, 51 inferred incidents, 19 with top similarity of 0.5 or more, 16 with a non-empty prediction; both example incidents' events, trajectories, matches and predictions; INC-00299 overlapping no true incident and INC-00654 holding 2 of GT-003's 8 events; 31 / 20 incidents with and without a true attack event; 13 of the 16. All matched the file. The selection code does what the text says. No leakage: ground truth is read by the script only, after all investigations, and the wiped graph held no ground-truth edges during the API phase. Not verifiable without a run: the ingest report and graph counts.
+
+### Blocking
+
+- **B1. A failure midway left the shared graph wiped or holding API-ingested data only, without saying so**: the wipe and the server start were outside the `try`, the rebuild after the `finally`.
+- **B2. "By a rule fixed before looking at any output" is a claim about process that code does not produce**, and lines were changed between runs.
+
+### Should-fix
+
+1. "Correct for this one example" on example B is circular: GT-003 is pattern C base, whose sequence is identical to HIST-C03, one of the two historical trajectories behind the prediction; the 0.5 is a 1-of-2 count.
+2. B9 did not say the pipeline split GT-003 into three incidents (the "next step" was already in the data, grouped separately).
+3. B can be read as typical. By the script's own logic over all 16 (reviewer's computation): 3 false alarms, 3 complete sequences, 5 not contiguous, 1 fragment with nothing after, 2 prefixes and 2 fragments agreeing. "Contains at least one true attack event" is a weak criterion.
+4. A's false-alarm status appears only about 200 lines below its header.
+5. "No API key is configured" was hard-coded; derive it from the agents' status fields.
+6. `start_server` would accept a stale server already on the port.
+7. Pipeline, not script: when two continuations tie at 0.5 the evidence lines mention only one and "top" is decided by technique id; when one of the two outcomes is "the sequence ended", the table shows a single 0.5 row.
+
+### Nits
+
+- Section numbering; the docstring said one incident; the rebuild restores the default dataset, not the previous graph; the report table shows three of the five matches without saying so; the health loop did not sleep on a non-200 answer.
+
+### Resolution
+
+| Finding | Status |
+|---|---|
+| B1 | **Fixed.** Wipe, server and run are inside one `try`; the rebuild is in the `finally`; a failure prints whether the rebuild succeeded and the output file is not written. |
+| B2 | **Fixed.** The sentence now states only what the code does: a rule that uses no ground truth. |
+| 1 | **Fixed.** No "correct" verdict is printed. True next step and top prediction are shown side by side, ties are named, and when the true sequence equals a historical record the output says the agreement is replay, naming the record (computed). |
+| 2, 3, 4, 5, 6 | **Fixed.** B9 lists the other inferred incidents holding the same true incident; a breakdown of all 16 is printed (it equals the reviewer's independent count); each example's header carries its ground-truth status; the policy sentence is built from the status fields of all 54 agent runs and the script fails if any is not the offline policy; a dead server process is detected. |
+| 7 | **TODO** (prediction evidence and tie handling), recorded in `PROGRESS.md`. |
+| Nits | Docstring, the three-of-five note and the health loop fixed; numbering left. |
+
+The fixes were not re-reviewed; the script was re-run twice after them with identical output.
