@@ -42,5 +42,6 @@ Agents: LLM API w/ tool-calling | Frontend: React + Vite + Cytoscape.js
 
 Steps 3-5 and all `python -m ...` commands run from the repository root with the backend venv active.
 Tests: `python -m pytest tests -q`. Experiments: `python -m experiments.run_all`.
+End-to-end smoke test through the running API (wipes and rebuilds the graph): `python -m evaluation.e2e_smoke`; one captured run is in `evaluation/results/e2e_example.txt`.
 
 See docs/architecture.md and docs/data-contracts.md. Current state, results and open work: docs/PROGRESS.md.
