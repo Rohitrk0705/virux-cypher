@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../../api/client';
 import { TechniqueInfo } from '../../types/contracts';
-import { Info, ExternalLink } from 'lucide-react';
+import { Info, ExternalLink, ShieldAlert, X } from 'lucide-react';
 
 interface TechniqueTagProps {
   techniqueId: string;
   name?: string;
   clickable?: boolean;
+  glow?: boolean;
 }
 
-export const TechniqueTag: React.FC<TechniqueTagProps> = ({ techniqueId, name: propName, clickable = true }) => {
+export const TechniqueTag: React.FC<TechniqueTagProps> = ({ techniqueId, name: propName, clickable = true, glow = false }) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [techInfo, setTechInfo] = useState<TechniqueInfo | null>(null);
   const [loading, setLoading] = useState(false);
@@ -38,122 +40,146 @@ export const TechniqueTag: React.FC<TechniqueTagProps> = ({ techniqueId, name: p
         className="badge-mono"
         style={{
           cursor: clickable ? 'pointer' : 'default',
-          backgroundColor: 'rgba(239, 68, 68, 0.12)',
-          border: '1px solid rgba(239, 68, 68, 0.35)',
-          color: '#f87171',
-          transition: 'all 0.15s ease',
+          backgroundColor: glow ? 'rgba(255, 138, 61, 0.16)' : 'rgba(255, 255, 255, 0.05)',
+          border: glow ? '1px solid rgba(255, 138, 61, 0.5)' : '1px solid rgba(255, 255, 255, 0.12)',
+          color: glow ? '#ff8a3d' : '#f1f5f9',
+          boxShadow: glow ? '0 0 16px rgba(255, 138, 61, 0.28)' : 'none',
+          transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
         }}
-        title="Click to view MITRE ATT&CK technique details"
+        onMouseEnter={(e) => {
+          if (clickable) {
+            e.currentTarget.style.borderColor = 'rgba(255, 138, 61, 0.6)';
+            e.currentTarget.style.color = '#ff8a3d';
+            e.currentTarget.style.backgroundColor = 'rgba(255, 138, 61, 0.12)';
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (clickable && !glow) {
+            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.12)';
+            e.currentTarget.style.color = '#f1f5f9';
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+          }
+        }}
+        title="Click to inspect MITRE ATT&CK technique details"
       >
-        <span style={{ fontWeight: 700 }}>{techniqueId}</span>
-        {propName && <span style={{ opacity: 0.85, fontWeight: 400 }}>· {propName}</span>}
+        <span style={{ fontWeight: 700, letterSpacing: '0.04em' }}>{techniqueId}</span>
+        {propName && <span style={{ opacity: 0.8, fontWeight: 400 }}>· {propName}</span>}
         {clickable && <Info size={11} style={{ opacity: 0.6 }} />}
       </span>
 
-      {modalOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-          }}
-          onClick={() => setModalOpen(false)}
-        >
+      <AnimatePresence>
+        {modalOpen && (
           <div
-            className="glass-panel"
             style={{
-              width: '90%',
-              maxWidth: '520px',
-              padding: '24px',
-              backgroundColor: '#0f172a',
-              border: '1px solid rgba(56, 189, 248, 0.3)',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
+              position: 'fixed',
+              inset: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.78)',
+              backdropFilter: 'blur(8px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000,
             }}
-            onClick={(e) => e.stopPropagation()}
+            onClick={() => setModalOpen(false)}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                  <span
-                    className="badge-mono"
-                    style={{
-                      background: 'rgba(239, 68, 68, 0.2)',
-                      border: '1px solid rgba(239, 68, 68, 0.5)',
-                      color: '#f87171',
-                      fontSize: '0.85rem',
-                      fontWeight: 700,
-                    }}
-                  >
-                    {techniqueId}
-                  </span>
-                  <span
-                    className="badge-mono"
-                    style={{
-                      background: 'rgba(56, 189, 248, 0.15)',
-                      border: '1px solid rgba(56, 189, 248, 0.3)',
-                      color: '#38bdf8',
-                    }}
-                  >
-                    {techInfo?.tactic || 'ATT&CK Tactic'}
-                  </span>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              className="glass-panel"
+              style={{
+                width: '90%',
+                maxWidth: '540px',
+                padding: '26px',
+                backgroundColor: 'rgba(15, 20, 32, 0.95)',
+                border: '1px solid rgba(255, 138, 61, 0.35)',
+                boxShadow: '0 25px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(255, 138, 61, 0.12)',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '18px' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                    <span
+                      className="badge-mono"
+                      style={{
+                        background: 'rgba(255, 138, 61, 0.18)',
+                        border: '1px solid rgba(255, 138, 61, 0.5)',
+                        color: '#ff8a3d',
+                        fontSize: '0.85rem',
+                        fontWeight: 700,
+                      }}
+                    >
+                      <ShieldAlert size={13} /> {techniqueId}
+                    </span>
+                    <span
+                      className="badge-mono"
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        color: '#94a3b8',
+                      }}
+                    >
+                      {techInfo?.tactic || 'ATT&CK TACTIC'}
+                    </span>
+                  </div>
+                  <h3 style={{ fontSize: '1.25rem', color: '#f8fafc', fontWeight: 700, fontFamily: 'var(--font-heading)' }}>
+                    {techInfo?.name || propName || techniqueId}
+                  </h3>
                 </div>
-                <h3 style={{ fontSize: '1.2rem', color: '#f8fafc', fontWeight: 600 }}>
-                  {techInfo?.name || propName || techniqueId}
-                </h3>
+                <button
+                  onClick={() => setModalOpen(false)}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '6px',
+                    color: '#94a3b8',
+                    padding: '4px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                  }}
+                >
+                  <X size={16} />
+                </button>
               </div>
-              <button
-                onClick={() => setModalOpen(false)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#94a3b8',
-                  fontSize: '1.25rem',
-                  cursor: 'pointer',
-                }}
-              >
-                ✕
-              </button>
-            </div>
 
-            {loading ? (
-              <div style={{ padding: '24px', textAlign: 'center', color: '#94a3b8' }}>
-                Fetching MITRE ATT&CK definition...
-              </div>
-            ) : (
-              <div>
-                <p style={{ color: '#cbd5e1', fontSize: '0.9rem', lineHeight: '1.6', marginBottom: '20px' }}>
-                  {techInfo?.description || 'No description found.'}
-                </p>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '16px' }}>
-                  <a
-                    href={`https://attack.mitre.org/techniques/${techniqueId.replace('.', '/')}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      color: '#38bdf8',
-                      fontSize: '0.825rem',
-                      textDecoration: 'none',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                    }}
-                  >
-                    View on MITRE ATT&CK <ExternalLink size={12} />
-                  </a>
-                  <button className="btn-secondary" onClick={() => setModalOpen(false)}>
-                    Close
-                  </button>
+              {loading ? (
+                <div style={{ padding: '28px', textAlign: 'center', color: '#94a3b8', fontSize: '0.875rem' }}>
+                  Querying MITRE ATT&CK knowledge base...
                 </div>
-              </div>
-            )}
+              ) : (
+                <div>
+                  <p style={{ color: '#cbd5e1', fontSize: '0.9rem', lineHeight: '1.65', marginBottom: '22px' }}>
+                    {techInfo?.description || 'No description found for this technique identifier.'}
+                  </p>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-subtle)', paddingTop: '16px' }}>
+                    <a
+                      href={`https://attack.mitre.org/techniques/${techniqueId.replace('.', '/')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        color: '#ff8a3d',
+                        fontSize: '0.825rem',
+                        fontWeight: 500,
+                        textDecoration: 'none',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                      }}
+                    >
+                      Official MITRE ATT&CK Documentation <ExternalLink size={12} />
+                    </a>
+                    <button className="btn-secondary" onClick={() => setModalOpen(false)}>
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              )}
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
     </>
   );
 };

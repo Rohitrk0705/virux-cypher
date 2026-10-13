@@ -18,30 +18,41 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab }) => {
   const navItems: { id: PageTab; label: string; icon: React.FC<{ size?: number; color?: string }>; badge?: string }[] = [
-    { id: 'overview', label: 'Incidents Overview', icon: LayoutDashboard },
+    { id: 'overview', label: 'Threat Overview', icon: LayoutDashboard },
     { id: 'incident', label: 'Attack Trajectory', icon: Activity },
     { id: 'graph', label: 'Knowledge Graph', icon: Share2 },
-    { id: 'historical', label: 'Historical Matches', icon: History },
+    { id: 'historical', label: 'Campaign Matches', icon: History },
     { id: 'prediction', label: 'Predictive Threat', icon: TrendingUp },
-    { id: 'explanation', label: 'Analyst Report', icon: FileText },
-    { id: 'investigation', label: 'Agent Investigation', icon: Terminal, badge: 'Agent' },
+    { id: 'explanation', label: 'Analyst Brief', icon: FileText },
+    { id: 'investigation', label: 'Agent Audit Trace', icon: Terminal, badge: 'Agent' },
   ];
 
   return (
     <aside
       style={{
-        width: '240px',
-        backgroundColor: 'rgba(11, 15, 25, 0.95)',
-        borderRight: '1px solid rgba(255, 255, 255, 0.07)',
+        width: '230px',
+        backgroundColor: 'rgba(10, 13, 20, 0.95)',
+        borderRight: '1px solid rgba(255, 255, 255, 0.08)',
         display: 'flex',
         flexDirection: 'column',
-        padding: '16px 12px',
+        padding: '16px 10px',
         gap: '4px',
         flexShrink: 0,
+        zIndex: 20,
       }}
     >
-      <div style={{ padding: '4px 12px 12px', fontSize: '0.7rem', fontWeight: 600, color: '#64748b', letterSpacing: '0.05em' }}>
-        ANALYST WORKSPACES
+      <div
+        style={{
+          padding: '6px 12px 12px',
+          fontSize: '0.68rem',
+          fontWeight: 700,
+          color: '#64748b',
+          letterSpacing: '0.08em',
+          textTransform: 'uppercase',
+          fontFamily: 'var(--font-heading)',
+        }}
+      >
+        SOC Workspaces
       </div>
 
       {navItems.map((item) => {
@@ -55,17 +66,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab }) => 
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              padding: '10px 14px',
+              padding: '9px 12px',
               borderRadius: '8px',
-              border: isActive ? '1px solid rgba(56, 189, 248, 0.35)' : '1px solid transparent',
-              backgroundColor: isActive ? 'rgba(56, 189, 248, 0.12)' : 'transparent',
-              color: isActive ? '#38bdf8' : '#94a3b8',
+              border: isActive ? '1px solid rgba(255, 138, 61, 0.4)' : '1px solid transparent',
+              backgroundColor: isActive ? 'rgba(255, 138, 61, 0.12)' : 'transparent',
+              color: isActive ? '#ff8a3d' : '#94a3b8',
+              boxShadow: isActive ? '0 0 14px rgba(255, 138, 61, 0.12)' : 'none',
               textAlign: 'left',
-              transition: 'all 0.15s ease',
+              transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
               outline: 'none',
               cursor: 'pointer',
               fontWeight: isActive ? 600 : 500,
-              fontSize: '0.85rem',
+              fontSize: '0.825rem',
+              position: 'relative',
             }}
             onMouseEnter={(e) => {
               if (!isActive) {
@@ -81,7 +94,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab }) => 
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Icon size={16} color={isActive ? '#38bdf8' : '#64748b'} />
+              <Icon size={16} color={isActive ? '#ff8a3d' : '#64748b'} />
               <span>{item.label}</span>
             </div>
             {item.badge && (
@@ -90,9 +103,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab }) => 
                 style={{
                   fontSize: '0.625rem',
                   padding: '1px 6px',
-                  background: 'rgba(168, 85, 247, 0.15)',
-                  border: '1px solid rgba(168, 85, 247, 0.4)',
-                  color: '#c084fc',
+                  background: 'rgba(255, 138, 61, 0.15)',
+                  border: '1px solid rgba(255, 138, 61, 0.4)',
+                  color: '#ff8a3d',
                 }}
               >
                 {item.badge}
@@ -102,23 +115,25 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab }) => 
         );
       })}
 
-      <div style={{ marginTop: 'auto', padding: '16px 12px 4px' }}>
+      <div style={{ marginTop: 'auto', padding: '16px 6px 4px' }}>
         <div
           className="glass-panel"
           style={{
-            padding: '12px',
-            backgroundColor: 'rgba(15, 23, 42, 0.6)',
-            border: '1px solid rgba(255, 255, 255, 0.05)',
+            padding: '12px 14px',
+            backgroundColor: 'rgba(15, 20, 32, 0.7)',
+            border: '1px solid rgba(255, 255, 255, 0.06)',
             fontSize: '0.75rem',
           }}
         >
-          <div style={{ color: '#94a3b8', marginBottom: '4px', fontWeight: 600 }}>Active Graph DB</div>
-          <div style={{ color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
-            Neo4j Bolt :7687
+          <div style={{ color: '#94a3b8', marginBottom: '4px', fontWeight: 600, fontSize: '0.7rem' }}>
+            GRAPH TELEMETRY
           </div>
-          <div style={{ color: '#64748b', fontSize: '0.7rem', marginTop: '4px' }}>
-            Cypher Schema v19.2
+          <div style={{ color: '#f1f5f9', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600, fontFamily: 'var(--font-mono)' }}>
+            <span className="pulse-dot-emerald" style={{ width: '6px', height: '6px' }} />
+            Neo4j Bolt: 7687
+          </div>
+          <div style={{ color: '#64748b', fontSize: '0.68rem', marginTop: '4px', fontFamily: 'var(--font-mono)' }}>
+            Temporal Cypher v19.2
           </div>
         </div>
       </div>

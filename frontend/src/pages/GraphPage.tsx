@@ -1,32 +1,32 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import cytoscape, { Core, EventObject } from 'cytoscape';
 import dagre from 'cytoscape-dagre';
 import { useIncident } from '../context/IncidentContext';
 import { api } from '../api/client';
-import { IncidentGraph, GraphNode, GraphEdge, GraphNodeType } from '../types/contracts';
+import { IncidentGraph, GraphNodeType } from '../types/contracts';
 import {
   Share2,
   ZoomIn,
   ZoomOut,
   Maximize2,
-  RefreshCw,
   Sliders,
   Info,
-  CheckSquare,
-  Square,
   Search,
+  X,
+  Compass,
 } from 'lucide-react';
 
 cytoscape.use(dagre);
 
 const NODE_COLORS: Record<GraphNodeType, string> = {
-  user: '#3b82f6',
-  device: '#a855f7',
-  ip: '#06b6d4',
-  process: '#f59e0b',
-  technique: '#ef4444',
-  tactic: '#ec4899',
-  event: '#64748b',
+  technique: '#ff4d4d', // Reserved Red for high threat MITRE techniques
+  tactic: '#ff8a3d',    // Amber for ATT&CK Tactics
+  process: '#facc15',   // Amber-Gold for Process execution
+  user: '#38bdf8',      // Slate-Cyan for Identity
+  device: '#94a3b8',    // Cool Slate for Host Device
+  ip: '#06b6d4',        // Cyan for Network IPs
+  event: '#64748b',     // Dark Slate for Normalized Log Events
 };
 
 export const GraphPage: React.FC = () => {
@@ -121,29 +121,46 @@ export const GraphPage: React.FC = () => {
             'background-color': 'data(nodeColor)',
             label: 'data(label)',
             color: '#f8fafc',
-            'font-family': 'Inter, sans-serif',
+            'font-family': 'Space Grotesk, sans-serif',
             'font-size': '11px',
             'font-weight': 600,
             'text-valign': 'bottom',
-            'text-margin-y': 6,
-            'text-background-color': 'rgba(11, 15, 25, 0.85)',
-            'text-background-opacity': 0.85,
+            'text-margin-y': 7,
+            'text-background-color': 'rgba(10, 13, 20, 0.9)',
+            'text-background-opacity': 0.9,
             'text-background-padding': '3px',
             'text-background-shape': 'roundrectangle',
             width: 32,
             height: 32,
             'border-width': 2,
-            'border-color': 'rgba(255, 255, 255, 0.25)',
+            'border-color': 'rgba(255, 255, 255, 0.2)',
+            'transition-property': 'opacity, border-color, border-width, width, height',
+            'transition-duration': 200,
           },
         },
         {
           selector: 'node[type = "technique"]',
           style: {
             shape: 'diamond',
-            width: 38,
-            height: 38,
+            width: 40,
+            height: 40,
+            'border-width': 3,
+            'border-color': '#ff4d4d',
+            'text-background-color': 'rgba(255, 77, 77, 0.15)',
+            'text-background-opacity': 1,
+            color: '#ff6b6b',
+            'font-weight': 700,
+          },
+        },
+        {
+          selector: 'node[type = "tactic"]',
+          style: {
+            shape: 'hexagon',
+            width: 36,
+            height: 36,
             'border-width': 2.5,
-            'border-color': '#f87171',
+            'border-color': '#ff8a3d',
+            color: '#ff9c5a',
           },
         },
         {
@@ -152,13 +169,14 @@ export const GraphPage: React.FC = () => {
             width: 22,
             height: 22,
             'font-size': '9px',
+            'border-width': 1.5,
           },
         },
         {
           selector: 'node:selected',
           style: {
             'border-width': 4,
-            'border-color': '#38bdf8',
+            'border-color': '#ff8a3d',
             'background-blacken': 0.1,
           },
         },
@@ -167,7 +185,7 @@ export const GraphPage: React.FC = () => {
           style: {
             width: 1.8,
             'line-color': 'rgba(148, 163, 184, 0.35)',
-            'target-arrow-color': 'rgba(148, 163, 184, 0.6)',
+            'target-arrow-color': 'rgba(148, 163, 184, 0.65)',
             'target-arrow-shape': 'triangle',
             'curve-style': 'bezier',
             'arrow-scale': 0.8,
@@ -176,43 +194,85 @@ export const GraphPage: React.FC = () => {
             'font-family': 'JetBrains Mono, monospace',
             color: '#94a3b8',
             'text-rotation': 'autorotate',
-            'text-background-color': 'rgba(11, 15, 25, 0.9)',
+            'text-background-color': 'rgba(10, 13, 20, 0.9)',
             'text-background-opacity': 0.9,
             'text-background-padding': '2px',
+            'transition-property': 'opacity, line-color, width',
+            'transition-duration': 200,
           },
         },
         {
           selector: 'edge[type = "NEXT"]',
           style: {
             width: 2.5,
-            'line-color': '#38bdf8',
-            'target-arrow-color': '#38bdf8',
+            'line-color': '#ff8a3d',
+            'target-arrow-color': '#ff8a3d',
             'line-style': 'dashed',
           },
         },
         {
           selector: 'edge[type = "MAPS_TO"]',
           style: {
-            width: 2,
-            'line-color': '#f43f5e',
-            'target-arrow-color': '#f43f5e',
+            width: 2.2,
+            'line-color': '#ff4d4d',
+            'target-arrow-color': '#ff4d4d',
           },
         },
         {
           selector: 'edge:selected',
           style: {
-            width: 3,
-            'line-color': '#38bdf8',
-            'target-arrow-color': '#38bdf8',
+            width: 3.5,
+            'line-color': '#ff8a3d',
+            'target-arrow-color': '#ff8a3d',
+          },
+        },
+        /* Dimming & Highlighting on hover */
+        {
+          selector: '.dimmed',
+          style: {
+            opacity: 0.12,
+          },
+        },
+        {
+          selector: '.highlighted',
+          style: {
+            opacity: 1,
+            'border-width': 3.5,
+            'border-color': '#ff8a3d',
+            'z-index': 999,
+          },
+        },
+        {
+          selector: 'edge.highlighted',
+          style: {
+            opacity: 1,
+            width: 2.8,
+            'line-color': '#ff8a3d',
+            'target-arrow-color': '#ff8a3d',
+            'z-index': 998,
           },
         },
       ],
       layout: {
         name: layoutName,
-        padding: 40,
-        animate: false,
-        ...(layoutName === 'dagre' ? { rankDir: 'LR', nodeSep: 50, rankSep: 70 } : {}),
+        padding: 50,
+        animate: true,
+        animationDuration: 650,
+        animationEasing: 'ease-out-cubic',
+        ...(layoutName === 'dagre' ? { rankDir: 'LR', nodeSep: 55, rankSep: 75 } : {}),
       },
+    });
+
+    // Hover interactions: highlight connected neighborhood and dim others
+    cy.on('mouseover', 'node', (evt: EventObject) => {
+      const node = evt.target;
+      const neighborhood = node.closedNeighborhood();
+      cy.elements().difference(neighborhood).addClass('dimmed');
+      neighborhood.addClass('highlighted');
+    });
+
+    cy.on('mouseout', 'node', () => {
+      cy.elements().removeClass('dimmed').removeClass('highlighted');
     });
 
     cy.on('tap', 'node, edge', (evt: EventObject) => {
@@ -262,15 +322,31 @@ export const GraphPage: React.FC = () => {
   };
 
   const resetView = () => {
-    cyRef.current?.fit(undefined, 40);
+    cyRef.current?.animate({
+      fit: { eles: cyRef.current.elements(), padding: 50 },
+      duration: 500,
+      easing: 'ease-out-cubic',
+    });
   };
 
   const zoomIn = () => {
-    if (cyRef.current) cyRef.current.zoom(cyRef.current.zoom() * 1.25);
+    if (!cyRef.current) return;
+    const cy = cyRef.current;
+    cy.animate({
+      zoom: cy.zoom() * 1.3,
+      duration: 250,
+      easing: 'ease-out-cubic',
+    });
   };
 
   const zoomOut = () => {
-    if (cyRef.current) cyRef.current.zoom(cyRef.current.zoom() * 0.8);
+    if (!cyRef.current) return;
+    const cy = cyRef.current;
+    cy.animate({
+      zoom: cy.zoom() * 0.77,
+      duration: 250,
+      easing: 'ease-out-cubic',
+    });
   };
 
   return (
@@ -279,8 +355,8 @@ export const GraphPage: React.FC = () => {
       <div
         style={{
           padding: '12px 24px',
-          background: 'rgba(13, 18, 29, 0.9)',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.07)',
+          background: 'rgba(10, 13, 20, 0.94)',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
@@ -290,12 +366,27 @@ export const GraphPage: React.FC = () => {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Share2 size={18} color="#38bdf8" />
-          <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#f8fafc' }}>
-            Threat Knowledge Graph — {activeIncidentId}
-          </h2>
+          <div
+            style={{
+              width: '28px',
+              height: '28px',
+              borderRadius: '6px',
+              background: 'rgba(255, 138, 61, 0.15)',
+              border: '1px solid rgba(255, 138, 61, 0.4)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Share2 size={16} color="#ff8a3d" />
+          </div>
+          <div>
+            <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#f8fafc', fontFamily: 'var(--font-heading)' }}>
+              Temporal Knowledge Graph — {activeIncidentId}
+            </h2>
+          </div>
           {graphData && (
-            <span className="badge-mono" style={{ background: 'rgba(56, 189, 248, 0.12)', color: '#38bdf8' }}>
+            <span className="badge-mono" style={{ background: 'rgba(255, 138, 61, 0.12)', color: '#ff8a3d', border: '1px solid rgba(255, 138, 61, 0.3)' }}>
               {graphData.nodes.length} nodes · {graphData.edges.length} edges
             </span>
           )}
@@ -309,43 +400,45 @@ export const GraphPage: React.FC = () => {
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              background: 'rgba(0,0,0,0.4)',
-              border: '1px solid rgba(255,255,255,0.08)',
+              background: 'rgba(15, 20, 32, 0.85)',
+              border: '1px solid rgba(255,255,255,0.1)',
               borderRadius: '6px',
-              padding: '4px 8px',
+              padding: '5px 10px',
             }}
           >
-            <Search size={13} color="#64748b" />
+            <Search size={13} color="#ff8a3d" />
             <input
               type="text"
-              placeholder="Search graph node..."
+              placeholder="Search node..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
                 background: 'transparent',
                 border: 'none',
                 color: '#f8fafc',
-                fontSize: '0.75rem',
+                fontSize: '0.78rem',
                 outline: 'none',
                 width: '130px',
+                fontFamily: 'var(--font-mono)',
               }}
             />
           </div>
 
           {/* Layout Selector */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Sliders size={14} color="#94a3b8" />
+            <Sliders size={13} color="#94a3b8" />
             <select
               value={layoutName}
               onChange={(e) => setLayoutName(e.target.value as any)}
               style={{
-                background: 'var(--bg-secondary)',
+                background: 'rgba(15, 20, 32, 0.85)',
                 color: '#cbd5e1',
                 border: '1px solid rgba(255,255,255,0.1)',
                 borderRadius: '6px',
-                padding: '4px 8px',
-                fontSize: '0.75rem',
+                padding: '5px 10px',
+                fontSize: '0.78rem',
                 outline: 'none',
+                fontFamily: 'var(--font-heading)',
               }}
             >
               <option value="cose">Force-Directed (CoSE)</option>
@@ -357,13 +450,13 @@ export const GraphPage: React.FC = () => {
 
           {/* Zoom Buttons */}
           <div style={{ display: 'flex', gap: '4px' }}>
-            <button className="btn-secondary" onClick={zoomIn} style={{ padding: '5px 8px' }} title="Zoom In">
+            <button className="btn-secondary" onClick={zoomIn} style={{ padding: '6px 8px' }} title="Zoom In">
               <ZoomIn size={14} />
             </button>
-            <button className="btn-secondary" onClick={zoomOut} style={{ padding: '5px 8px' }} title="Zoom Out">
+            <button className="btn-secondary" onClick={zoomOut} style={{ padding: '6px 8px' }} title="Zoom Out">
               <ZoomOut size={14} />
             </button>
-            <button className="btn-secondary" onClick={resetView} style={{ padding: '5px 8px' }} title="Fit View">
+            <button className="btn-secondary" onClick={resetView} style={{ padding: '6px 8px' }} title="Fit View">
               <Maximize2 size={14} />
             </button>
           </div>
@@ -381,8 +474,8 @@ export const GraphPage: React.FC = () => {
             height: '100%',
             backgroundColor: '#07090e',
             backgroundImage:
-              'radial-gradient(circle at center, rgba(56, 189, 248, 0.04) 0%, transparent 70%), linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px)',
-            backgroundSize: '100% 100%, 30px 30px, 30px 30px',
+              'radial-gradient(circle at center, rgba(255, 138, 61, 0.03) 0%, transparent 70%), linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px)',
+            backgroundSize: '100% 100%, 36px 36px, 36px 36px',
           }}
         />
 
@@ -391,16 +484,16 @@ export const GraphPage: React.FC = () => {
           className="glass-panel"
           style={{
             position: 'absolute',
-            bottom: '20px',
-            left: '20px',
-            padding: '12px 16px',
+            bottom: '24px',
+            left: '24px',
+            padding: '14px 18px',
             zIndex: 10,
-            maxWidth: '320px',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+            maxWidth: '340px',
+            boxShadow: '0 12px 35px rgba(0,0,0,0.7)',
           }}
         >
-          <div style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 700, marginBottom: '8px', letterSpacing: '0.05em' }}>
-            NODE TYPE FILTERS
+          <div style={{ fontSize: '0.72rem', color: '#ff8a3d', fontWeight: 700, marginBottom: '8px', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Compass size={12} /> ENTITY FILTERS & LEGEND
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px' }}>
             {(Object.keys(NODE_COLORS) as GraphNodeType[]).map((type) => {
@@ -412,13 +505,15 @@ export const GraphPage: React.FC = () => {
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '6px',
+                    gap: '8px',
                     cursor: 'pointer',
-                    fontSize: '0.72rem',
+                    fontSize: '0.74rem',
                     color: isVis ? '#f1f5f9' : '#64748b',
-                    padding: '3px 6px',
-                    borderRadius: '4px',
+                    padding: '4px 8px',
+                    borderRadius: '6px',
                     background: isVis ? 'rgba(255, 255, 255, 0.04)' : 'transparent',
+                    border: isVis ? '1px solid rgba(255, 255, 255, 0.06)' : '1px solid transparent',
+                    transition: 'all 0.15s ease',
                   }}
                 >
                   <span
@@ -430,9 +525,10 @@ export const GraphPage: React.FC = () => {
                       backgroundColor: isVis ? NODE_COLORS[type] : '#475569',
                       display: 'inline-block',
                       flexShrink: 0,
+                      boxShadow: isVis && type === 'technique' ? '0 0 8px #ff4d4d' : 'none',
                     }}
                   />
-                  <span style={{ textTransform: 'capitalize', fontWeight: 500 }}>{type}</span>
+                  <span style={{ textTransform: 'capitalize', fontWeight: 600 }}>{type}</span>
                 </div>
               );
             })}
@@ -440,151 +536,160 @@ export const GraphPage: React.FC = () => {
         </div>
 
         {/* Node & Edge Inspector Side Drawer */}
-        {selectedElement && (
-          <div
-            className="glass-panel"
-            style={{
-              width: '340px',
-              position: 'absolute',
-              top: '20px',
-              right: '20px',
-              bottom: '20px',
-              padding: '20px',
-              zIndex: 20,
-              display: 'flex',
-              flexDirection: 'column',
-              boxShadow: '0 12px 40px rgba(0,0,0,0.7)',
-              backgroundColor: 'rgba(15, 23, 42, 0.95)',
-              overflowY: 'auto',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Info size={16} color="#38bdf8" />
-                <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#f8fafc' }}>
-                  {selectedElement.isNode ? 'Node Details' : 'Edge Relationship'}
-                </h3>
-              </div>
-              <button
-                onClick={() => setSelectedElement(null)}
-                style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '1rem', cursor: 'pointer' }}
-              >
-                ✕
-              </button>
-            </div>
-
-            {selectedElement.isNode ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <div>
-                  <span
-                    className="badge-mono"
-                    style={{
-                      background: `${NODE_COLORS[selectedElement.data.type as GraphNodeType] || '#38bdf8'}22`,
-                      color: NODE_COLORS[selectedElement.data.type as GraphNodeType] || '#38bdf8',
-                      border: `1px solid ${NODE_COLORS[selectedElement.data.type as GraphNodeType] || '#38bdf8'}66`,
-                      textTransform: 'uppercase',
-                      fontWeight: 700,
-                    }}
-                  >
-                    {selectedElement.data.type}
-                  </span>
-                  <div
-                    style={{
-                      fontSize: '1.2rem',
-                      fontWeight: 700,
-                      color: '#f8fafc',
-                      marginTop: '8px',
-                      fontFamily: 'var(--font-mono)',
-                    }}
-                  >
-                    {selectedElement.data.label}
-                  </div>
+        <AnimatePresence>
+          {selectedElement && (
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              className="glass-panel"
+              style={{
+                width: '360px',
+                position: 'absolute',
+                top: '20px',
+                right: '24px',
+                bottom: '24px',
+                padding: '22px',
+                zIndex: 20,
+                display: 'flex',
+                flexDirection: 'column',
+                boxShadow: '0 16px 50px rgba(0,0,0,0.8), 0 0 25px rgba(255, 138, 61, 0.1)',
+                backgroundColor: 'rgba(12, 16, 26, 0.96)',
+                border: '1px solid rgba(255, 138, 61, 0.3)',
+                overflowY: 'auto',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Info size={16} color="#ff8a3d" />
+                  <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#f8fafc', fontFamily: 'var(--font-heading)' }}>
+                    {selectedElement.isNode ? 'Entity Telemetry' : 'Edge Link Relation'}
+                  </h3>
                 </div>
-
-                <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '12px' }}>
-                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '8px', fontWeight: 600 }}>
-                    RAW ATTRIBUTES
-                  </div>
-                  <pre
-                    style={{
-                      background: '#090d16',
-                      padding: '12px',
-                      borderRadius: '8px',
-                      fontSize: '0.72rem',
-                      fontFamily: 'var(--font-mono)',
-                      color: '#cbd5e1',
-                      overflowX: 'auto',
-                    }}
-                  >
-                    {JSON.stringify(selectedElement.raw, null, 2)}
-                  </pre>
-                </div>
+                <button
+                  onClick={() => setSelectedElement(null)}
+                  style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', display: 'flex' }}
+                >
+                  <X size={16} />
+                </button>
               </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <div>
-                  <span
-                    className="badge-mono"
-                    style={{
-                      background: 'rgba(56, 189, 248, 0.15)',
-                      color: '#38bdf8',
-                      border: '1px solid rgba(56, 189, 248, 0.4)',
-                      fontWeight: 700,
-                    }}
-                  >
-                    {selectedElement.data.type}
-                  </span>
-                  <div style={{ marginTop: '12px', fontSize: '0.85rem', color: '#cbd5e1' }}>
-                    <div style={{ marginBottom: '6px' }}>
-                      <span style={{ color: '#64748b' }}>From:</span>{' '}
-                      <code style={{ color: '#f8fafc' }}>{selectedElement.data.source}</code>
-                    </div>
-                    <div>
-                      <span style={{ color: '#64748b' }}>To:</span>{' '}
-                      <code style={{ color: '#f8fafc' }}>{selectedElement.data.target}</code>
+
+              {selectedElement.isNode ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div>
+                    <span
+                      className="badge-mono"
+                      style={{
+                        background: `${NODE_COLORS[selectedElement.data.type as GraphNodeType] || '#ff8a3d'}22`,
+                        color: NODE_COLORS[selectedElement.data.type as GraphNodeType] || '#ff8a3d',
+                        border: `1px solid ${NODE_COLORS[selectedElement.data.type as GraphNodeType] || '#ff8a3d'}66`,
+                        textTransform: 'uppercase',
+                        fontWeight: 700,
+                      }}
+                    >
+                      {selectedElement.data.type}
+                    </span>
+                    <div
+                      style={{
+                        fontSize: '1.25rem',
+                        fontWeight: 700,
+                        color: '#f8fafc',
+                        marginTop: '10px',
+                        fontFamily: 'var(--font-mono)',
+                      }}
+                    >
+                      {selectedElement.data.label}
                     </div>
                   </div>
-                </div>
 
-                <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '12px' }}>
-                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '8px', fontWeight: 600 }}>
-                    EDGE METADATA
+                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '14px' }}>
+                    <div style={{ fontSize: '0.72rem', color: '#64748b', marginBottom: '8px', fontWeight: 700, letterSpacing: '0.04em' }}>
+                      RAW GRAPH ENTITY METADATA
+                    </div>
+                    <pre
+                      style={{
+                        background: 'rgba(5, 7, 12, 0.95)',
+                        padding: '12px',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                        fontSize: '0.72rem',
+                        fontFamily: 'var(--font-mono)',
+                        color: '#cbd5e1',
+                        overflowX: 'auto',
+                      }}
+                    >
+                      {JSON.stringify(selectedElement.raw, null, 2)}
+                    </pre>
                   </div>
-                  <pre
-                    style={{
-                      background: '#090d16',
-                      padding: '12px',
-                      borderRadius: '8px',
-                      fontSize: '0.72rem',
-                      fontFamily: 'var(--font-mono)',
-                      color: '#cbd5e1',
-                      overflowX: 'auto',
-                    }}
-                  >
-                    {JSON.stringify(selectedElement.raw, null, 2)}
-                  </pre>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div>
+                    <span
+                      className="badge-mono"
+                      style={{
+                        background: 'rgba(255, 138, 61, 0.18)',
+                        color: '#ff8a3d',
+                        border: '1px solid rgba(255, 138, 61, 0.45)',
+                        fontWeight: 700,
+                      }}
+                    >
+                      RELATION: {selectedElement.data.type}
+                    </span>
+                    <div style={{ marginTop: '14px', fontSize: '0.85rem', color: '#cbd5e1' }}>
+                      <div style={{ marginBottom: '8px' }}>
+                        <span style={{ color: '#64748b', fontWeight: 600 }}>Source:</span>{' '}
+                        <code style={{ color: '#ff8a3d' }}>{selectedElement.data.source}</code>
+                      </div>
+                      <div>
+                        <span style={{ color: '#64748b', fontWeight: 600 }}>Target:</span>{' '}
+                        <code style={{ color: '#ff8a3d' }}>{selectedElement.data.target}</code>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '14px' }}>
+                    <div style={{ fontSize: '0.72rem', color: '#64748b', marginBottom: '8px', fontWeight: 700, letterSpacing: '0.04em' }}>
+                      RAW EDGE RELATION
+                    </div>
+                    <pre
+                      style={{
+                        background: 'rgba(5, 7, 12, 0.95)',
+                        padding: '12px',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                        fontSize: '0.72rem',
+                        fontFamily: 'var(--font-mono)',
+                        color: '#cbd5e1',
+                        overflowX: 'auto',
+                      }}
+                    >
+                      {JSON.stringify(selectedElement.raw, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {loading && (
           <div
             style={{
               position: 'absolute',
               inset: 0,
-              background: 'rgba(7, 9, 14, 0.75)',
+              background: 'rgba(7, 9, 14, 0.8)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#38bdf8',
+              color: '#ff8a3d',
               fontSize: '0.9rem',
               fontWeight: 600,
               zIndex: 30,
             }}
           >
-            Building interactive knowledge graph...
+            Constructing interactive knowledge graph...
           </div>
         )}
       </div>

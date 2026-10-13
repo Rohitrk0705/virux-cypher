@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { useIncident } from '../context/IncidentContext';
 import { RiskBadge, calculateIncidentRisk } from '../components/common/RiskBadge';
+import { AnimatedCounter } from '../components/common/AnimatedCounter';
 import { PageTab } from '../components/layout/Sidebar';
 import { ShieldAlert, Search, Filter, ArrowRight, Clock, Hash, AlertTriangle, Layers } from 'lucide-react';
 
@@ -9,9 +11,10 @@ interface OverviewPageProps {
 }
 
 export const OverviewPage: React.FC<OverviewPageProps> = ({ onNavigate }) => {
-  const { incidents, activeIncidentId, setActiveIncidentId, health, loading, error } = useIncident();
+  const { incidents, activeIncidentId, setActiveIncidentId, health, loading } = useIncident();
   const [search, setSearch] = useState('');
   const [riskFilter, setRiskFilter] = useState<'ALL' | 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'>('ALL');
+  const prefersReduced = useReducedMotion();
 
   const filteredIncidents = incidents.filter((inc) => {
     const matchesSearch = inc.incident_id.toLowerCase().includes(search.toLowerCase());
@@ -39,80 +42,128 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({ onNavigate }) => {
     onNavigate(targetTab, id);
   };
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: prefersReduced ? 0 : 0.05,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: prefersReduced ? 0 : 10 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.25, ease: 'easeOut' as const },
+    },
+  };
+
   return (
-    <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div style={{ padding: '26px 32px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Page Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <h1 style={{ fontSize: '1.6rem', fontWeight: 700, color: '#f8fafc', marginBottom: '6px' }}>
-            Threat Incidents Overview
+          <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#f8fafc', marginBottom: '6px' }}>
+            Threat Incidents Command Center
           </h1>
           <p style={{ color: '#94a3b8', fontSize: '0.875rem' }}>
-            Inferred security campaigns and attack clusters with dynamic risk scoring and graph telemetry.
+            Inferred intrusion campaigns and attack clusters with dynamic risk scoring and graph telemetry.
           </p>
         </div>
       </div>
 
       {/* KPI Metric Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-        <div className="glass-panel" style={{ padding: '18px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', marginBottom: '8px' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>TOTAL INCIDENTS</span>
-            <Layers size={18} color="#38bdf8" />
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}
+      >
+        {/* TOTAL INCIDENTS */}
+        <motion.div
+          variants={itemVariants}
+          className="glass-panel glass-panel-interactive"
+          style={{ padding: '20px' }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', marginBottom: '10px' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.04em' }}>TOTAL INCIDENTS</span>
+            <Layers size={18} color="#94a3b8" />
           </div>
-          <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f8fafc', fontFamily: 'var(--font-mono)' }}>
-            {incidents.length}
+          <div style={{ fontSize: '2rem', fontWeight: 800, color: '#f8fafc', fontFamily: 'var(--font-mono)' }}>
+            <AnimatedCounter value={incidents.length} />
           </div>
-          <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px' }}>
+          <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '6px', fontFamily: 'var(--font-mono)' }}>
             {health?.incidents ?? incidents.length} in temporal graph
           </div>
-        </div>
+        </motion.div>
 
-        <div className="glass-panel" style={{ padding: '18px', borderColor: 'rgba(244, 63, 94, 0.25)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#fb7185', marginBottom: '8px' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>CRITICAL THREATS</span>
-            <ShieldAlert size={18} color="#f43f5e" />
+        {/* CRITICAL THREATS (strictly reserved red) */}
+        <motion.div
+          variants={itemVariants}
+          className="glass-panel glass-panel-interactive glow-panel-critical"
+          style={{ padding: '20px' }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#ff6b6b', marginBottom: '10px' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span className="pulse-dot-red" style={{ width: '6px', height: '6px' }} /> CRITICAL THREATS
+            </span>
+            <ShieldAlert size={18} color="#ff4d4d" />
           </div>
-          <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#fb7185', fontFamily: 'var(--font-mono)' }}>
-            {criticalCount}
+          <div style={{ fontSize: '2rem', fontWeight: 800, color: '#ff6b6b', fontFamily: 'var(--font-mono)' }}>
+            <AnimatedCounter value={criticalCount} />
           </div>
-          <div style={{ fontSize: '0.75rem', color: '#f43f5e', opacity: 0.8, marginTop: '4px' }}>
-            Immediate action required
+          <div style={{ fontSize: '0.72rem', color: '#ff6b6b', opacity: 0.85, marginTop: '6px', fontFamily: 'var(--font-mono)' }}>
+            Immediate SOC triage required
           </div>
-        </div>
+        </motion.div>
 
-        <div className="glass-panel" style={{ padding: '18px', borderColor: 'rgba(245, 158, 11, 0.25)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#fbbf24', marginBottom: '8px' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>HIGH SEVERITY</span>
-            <AlertTriangle size={18} color="#f59e0b" />
+        {/* HIGH SEVERITY (amber) */}
+        <motion.div
+          variants={itemVariants}
+          className="glass-panel glass-panel-interactive glow-panel-amber"
+          style={{ padding: '20px' }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#ff9c5a', marginBottom: '10px' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span className="pulse-dot-amber" style={{ width: '6px', height: '6px' }} /> HIGH SEVERITY
+            </span>
+            <AlertTriangle size={18} color="#ff8a3d" />
           </div>
-          <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#fbbf24', fontFamily: 'var(--font-mono)' }}>
-            {highCount}
+          <div style={{ fontSize: '2rem', fontWeight: 800, color: '#ff9c5a', fontFamily: 'var(--font-mono)' }}>
+            <AnimatedCounter value={highCount} />
           </div>
-          <div style={{ fontSize: '0.75rem', color: '#f59e0b', opacity: 0.8, marginTop: '4px' }}>
-            Privilege Escalation & Lateral
+          <div style={{ fontSize: '0.72rem', color: '#ff8a3d', opacity: 0.85, marginTop: '6px', fontFamily: 'var(--font-mono)' }}>
+            Privilege Escalation & Lateral Movement
           </div>
-        </div>
+        </motion.div>
 
-        <div className="glass-panel" style={{ padding: '18px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', marginBottom: '8px' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>CORRELATED EVENTS</span>
+        {/* CORRELATED EVENTS */}
+        <motion.div
+          variants={itemVariants}
+          className="glass-panel glass-panel-interactive"
+          style={{ padding: '20px' }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', marginBottom: '10px' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.04em' }}>CORRELATED EVENTS</span>
             <Hash size={18} color="#10b981" />
           </div>
-          <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f8fafc', fontFamily: 'var(--font-mono)' }}>
-            {totalEvents}
+          <div style={{ fontSize: '2rem', fontWeight: 800, color: '#f8fafc', fontFamily: 'var(--font-mono)' }}>
+            <AnimatedCounter value={totalEvents} />
           </div>
-          <div style={{ fontSize: '0.75rem', color: '#10b981', marginTop: '4px' }}>
-            {health?.events ?? 3986} total events in knowledge base
+          <div style={{ fontSize: '0.72rem', color: '#10b981', marginTop: '6px', fontFamily: 'var(--font-mono)' }}>
+            {health?.events ?? 3986} normalized telemetry events
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
 
       {/* Filter and Search Bar */}
       <div
         className="glass-panel"
         style={{
-          padding: '12px 18px',
+          padding: '14px 20px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
@@ -120,8 +171,8 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({ onNavigate }) => {
           flexWrap: 'wrap',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: '240px' }}>
-          <Search size={16} color="#64748b" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: '260px' }}>
+          <Search size={16} color="#ff8a3d" />
           <input
             type="text"
             placeholder="Search incident ID (e.g. INC-03265)..."
@@ -132,7 +183,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({ onNavigate }) => {
               border: 'none',
               outline: 'none',
               color: '#f8fafc',
-              fontSize: '0.875rem',
+              fontSize: '0.85rem',
               width: '100%',
               fontFamily: 'var(--font-mono)',
             }}
@@ -140,21 +191,43 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({ onNavigate }) => {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Filter size={15} color="#64748b" />
-          <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 500 }}>Risk Level:</span>
+          <Filter size={14} color="#64748b" />
+          <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600 }}>Risk Filter:</span>
           {(['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const).map((lvl) => (
             <button
               key={lvl}
               onClick={() => setRiskFilter(lvl)}
               style={{
-                background: riskFilter === lvl ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255, 255, 255, 0.04)',
-                border: riskFilter === lvl ? '1px solid rgba(56, 189, 248, 0.5)' : '1px solid rgba(255, 255, 255, 0.08)',
-                color: riskFilter === lvl ? '#38bdf8' : '#94a3b8',
+                background:
+                  riskFilter === lvl
+                    ? lvl === 'CRITICAL'
+                      ? 'rgba(255, 77, 77, 0.2)'
+                      : 'rgba(255, 138, 61, 0.2)'
+                    : 'rgba(255, 255, 255, 0.04)',
+                border:
+                  riskFilter === lvl
+                    ? lvl === 'CRITICAL'
+                      ? '1px solid rgba(255, 77, 77, 0.6)'
+                      : '1px solid rgba(255, 138, 61, 0.6)'
+                    : '1px solid rgba(255, 255, 255, 0.08)',
+                color:
+                  riskFilter === lvl
+                    ? lvl === 'CRITICAL'
+                      ? '#ff6b6b'
+                      : '#ff8a3d'
+                    : '#94a3b8',
+                boxShadow:
+                  riskFilter === lvl
+                    ? lvl === 'CRITICAL'
+                      ? '0 0 10px rgba(255, 77, 77, 0.25)'
+                      : '0 0 10px rgba(255, 138, 61, 0.2)'
+                    : 'none',
                 borderRadius: '6px',
                 padding: '4px 10px',
-                fontSize: '0.75rem',
-                fontWeight: 600,
+                fontSize: '0.72rem',
+                fontWeight: 700,
                 cursor: 'pointer',
+                transition: 'all 0.15s ease',
               }}
             >
               {lvl}
@@ -164,28 +237,28 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({ onNavigate }) => {
       </div>
 
       {/* Incidents Table */}
-      <div className="glass-panel glow-panel" style={{ overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+      <div className="glass-panel" style={{ overflow: 'hidden' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
           <thead>
             <tr style={{ backgroundColor: 'rgba(255, 255, 255, 0.03)', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
-              <th style={{ padding: '14px 20px', color: '#94a3b8', fontWeight: 600 }}>INCIDENT ID</th>
-              <th style={{ padding: '14px 20px', color: '#94a3b8', fontWeight: 600 }}>RISK SCORE</th>
-              <th style={{ padding: '14px 20px', color: '#94a3b8', fontWeight: 600 }}>TIMEFRAME (UTC)</th>
-              <th style={{ padding: '14px 20px', color: '#94a3b8', fontWeight: 600 }}>DURATION</th>
-              <th style={{ padding: '14px 20px', color: '#94a3b8', fontWeight: 600 }}>EVENTS</th>
-              <th style={{ padding: '14px 20px', color: '#94a3b8', fontWeight: 600, textAlign: 'right' }}>ACTIONS</th>
+              <th style={{ padding: '14px 20px', color: '#94a3b8', fontWeight: 700, fontFamily: 'var(--font-heading)' }}>INCIDENT ID</th>
+              <th style={{ padding: '14px 20px', color: '#94a3b8', fontWeight: 700, fontFamily: 'var(--font-heading)' }}>RISK SCORE</th>
+              <th style={{ padding: '14px 20px', color: '#94a3b8', fontWeight: 700, fontFamily: 'var(--font-heading)' }}>TIMEFRAME (UTC)</th>
+              <th style={{ padding: '14px 20px', color: '#94a3b8', fontWeight: 700, fontFamily: 'var(--font-heading)' }}>DURATION</th>
+              <th style={{ padding: '14px 20px', color: '#94a3b8', fontWeight: 700, fontFamily: 'var(--font-heading)' }}>EVENTS</th>
+              <th style={{ padding: '14px 20px', color: '#94a3b8', fontWeight: 700, fontFamily: 'var(--font-heading)', textAlign: 'right' }}>ACTIONS</th>
             </tr>
           </thead>
-          <tbody>
+          <motion.tbody variants={containerVariants} initial="hidden" animate="visible">
             {loading ? (
               <tr>
-                <td colSpan={6} style={{ padding: '36px', textAlign: 'center', color: '#94a3b8' }}>
+                <td colSpan={6} style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
                   Loading incidents from Virux Cypher engine...
                 </td>
               </tr>
             ) : filteredIncidents.length === 0 ? (
               <tr>
-                <td colSpan={6} style={{ padding: '36px', textAlign: 'center', color: '#64748b' }}>
+                <td colSpan={6} style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
                   No incidents found matching criteria.
                 </td>
               </tr>
@@ -193,29 +266,37 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({ onNavigate }) => {
               filteredIncidents.map((inc) => {
                 const isActive = inc.incident_id === activeIncidentId;
                 return (
-                  <tr
+                  <motion.tr
                     key={inc.incident_id}
+                    variants={itemVariants}
                     style={{
                       borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-                      backgroundColor: isActive ? 'rgba(56, 189, 248, 0.06)' : 'transparent',
+                      backgroundColor: isActive ? 'rgba(255, 138, 61, 0.08)' : 'transparent',
                       transition: 'background-color 0.15s ease',
                       cursor: 'pointer',
                     }}
                     onClick={() => handleSelectIncident(inc.incident_id, 'incident')}
+                    onMouseEnter={(e) => {
+                      if (!isActive) e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.03)';
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isActive) e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
                   >
                     <td style={{ padding: '14px 20px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span className="mono" style={{ fontWeight: 700, color: '#f8fafc', fontSize: '0.95rem' }}>
+                        <span className="mono" style={{ fontWeight: 700, color: '#f8fafc', fontSize: '0.925rem' }}>
                           {inc.incident_id}
                         </span>
                         {isActive && (
                           <span
                             className="badge-mono"
                             style={{
-                              background: 'rgba(56, 189, 248, 0.2)',
-                              color: '#38bdf8',
-                              border: '1px solid rgba(56, 189, 248, 0.4)',
+                              background: 'rgba(255, 138, 61, 0.2)',
+                              color: '#ff8a3d',
+                              border: '1px solid rgba(255, 138, 61, 0.5)',
                               fontSize: '0.65rem',
+                              fontWeight: 700,
                             }}
                           >
                             ACTIVE
@@ -224,7 +305,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({ onNavigate }) => {
                       </div>
                     </td>
                     <td style={{ padding: '14px 20px' }}>
-                      <RiskBadge incident={inc} />
+                      <RiskBadge incident={inc} animateScore={true} />
                     </td>
                     <td style={{ padding: '14px 20px', color: '#cbd5e1' }}>
                       <div className="mono" style={{ fontSize: '0.78rem' }}>
@@ -233,7 +314,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({ onNavigate }) => {
                       </div>
                     </td>
                     <td style={{ padding: '14px 20px', color: '#94a3b8' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <Clock size={13} color="#64748b" />
                         <span className="mono">{formatDuration(inc.start, inc.end)}</span>
                       </div>
@@ -277,11 +358,11 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({ onNavigate }) => {
                         </button>
                       </div>
                     </td>
-                  </tr>
+                  </motion.tr>
                 );
               })
             )}
-          </tbody>
+          </motion.tbody>
         </table>
       </div>
     </div>

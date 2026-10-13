@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { useIncident } from '../context/IncidentContext';
 import { api } from '../api/client';
 import { Report } from '../types/contracts';
@@ -12,6 +13,7 @@ export const ExplanationPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [viewMode, setViewMode] = useState<'rendered' | 'raw'>('rendered');
+  const prefersReduced = useReducedMotion();
 
   useEffect(() => {
     let isCurrent = true;
@@ -54,38 +56,53 @@ export const ExplanationPage: React.FC = () => {
   const renderedHtml = reportData ? marked.parse(reportData.report) : '';
 
   return (
-    <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div style={{ padding: '26px 32px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Page Header & Actions */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-            <FileText size={22} color="#38bdf8" />
-            <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#f8fafc' }}>
-              Analyst Investigation Report (Contract 6)
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+            <div
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                background: 'rgba(255, 138, 61, 0.15)',
+                border: '1px solid rgba(255, 138, 61, 0.4)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <FileText size={18} color="#ff8a3d" />
+            </div>
+            <h1 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#f8fafc' }}>
+              Analyst Executive Brief (Contract 6)
             </h1>
           </div>
           <p style={{ color: '#94a3b8', fontSize: '0.875rem' }}>
-            Executive briefing and technical synthesis generated for <code style={{ color: '#38bdf8' }}>{activeIncidentId}</code>.
+            Multi-agent incident synthesis and recommended containment posture for <code style={{ color: '#ff8a3d', fontWeight: 700 }}>{activeIncidentId}</code>.
           </p>
         </div>
 
         {reportData && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             {/* View Mode Switcher */}
-            <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', padding: '2px', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <div style={{ display: 'flex', background: 'rgba(10, 13, 20, 0.8)', borderRadius: '8px', padding: '3px', border: '1px solid rgba(255,255,255,0.08)' }}>
               <button
                 onClick={() => setViewMode('rendered')}
                 style={{
-                  background: viewMode === 'rendered' ? 'rgba(56, 189, 248, 0.2)' : 'transparent',
-                  color: viewMode === 'rendered' ? '#38bdf8' : '#94a3b8',
+                  background: viewMode === 'rendered' ? 'rgba(255, 138, 61, 0.2)' : 'transparent',
+                  color: viewMode === 'rendered' ? '#ff8a3d' : '#94a3b8',
                   border: 'none',
-                  padding: '6px 12px',
+                  padding: '6px 14px',
                   borderRadius: '6px',
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
                 }}
               >
                 <Eye size={13} /> Rendered
@@ -93,19 +110,21 @@ export const ExplanationPage: React.FC = () => {
               <button
                 onClick={() => setViewMode('raw')}
                 style={{
-                  background: viewMode === 'raw' ? 'rgba(56, 189, 248, 0.2)' : 'transparent',
-                  color: viewMode === 'raw' ? '#38bdf8' : '#94a3b8',
+                  background: viewMode === 'raw' ? 'rgba(255, 138, 61, 0.2)' : 'transparent',
+                  color: viewMode === 'raw' ? '#ff8a3d' : '#94a3b8',
                   border: 'none',
-                  padding: '6px 12px',
+                  padding: '6px 14px',
                   borderRadius: '6px',
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
                 }}
               >
-                <Code2 size={13} /> Raw MD
+                <Code2 size={13} /> Markdown Source
               </button>
             </div>
 
@@ -122,23 +141,29 @@ export const ExplanationPage: React.FC = () => {
       </div>
 
       {loading ? (
-        <div className="glass-panel" style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
-          Synthesizing multi-agent analyst report...
+        <div className="glass-panel" style={{ padding: '48px', textAlign: 'center', color: '#94a3b8', fontSize: '0.875rem' }}>
+          Synthesizing multi-agent analyst report from causal evidence...
         </div>
       ) : error ? (
-        <div className="glass-panel" style={{ padding: '20px', color: '#fb7185', background: 'rgba(244,63,94,0.1)' }}>
+        <div className="glass-panel glow-panel-critical" style={{ padding: '20px', color: '#ff6b6b' }}>
           {error}
         </div>
       ) : !reportData ? null : (
-        <div className="glass-panel glow-panel" style={{ padding: '32px' }}>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: prefersReduced ? 0 : 0.3 }}
+          className="glass-panel"
+          style={{ padding: '32px 36px', backgroundColor: 'rgba(14, 18, 28, 0.85)' }}
+        >
           {/* Metadata banner */}
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              paddingBottom: '16px',
-              marginBottom: '24px',
+              paddingBottom: '18px',
+              marginBottom: '26px',
               borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
               fontSize: '0.8rem',
               color: '#94a3b8',
@@ -146,19 +171,19 @@ export const ExplanationPage: React.FC = () => {
               gap: '12px',
             }}
           >
-            <div style={{ display: 'flex', gap: '16px' }}>
+            <div style={{ display: 'flex', gap: '18px', flexWrap: 'wrap' }}>
               <span>
                 Incident ID: <strong style={{ color: '#f8fafc', fontFamily: 'var(--font-mono)' }}>{reportData.incident_id}</strong>
               </span>
               <span>
-                Generator: <strong style={{ color: '#38bdf8' }}>{reportData.generated_by}</strong>
+                Generator: <strong style={{ color: '#ff8a3d' }}>{reportData.generated_by}</strong>
               </span>
               <span>
                 Format: <strong style={{ color: '#cbd5e1' }}>{reportData.format}</strong>
               </span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#10b981' }}>
-              <ShieldCheck size={14} /> Verified SOC Artifact
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#34d399', fontWeight: 600 }}>
+              <ShieldCheck size={15} /> Verified SOC Artifact
             </div>
           </div>
 
@@ -171,13 +196,14 @@ export const ExplanationPage: React.FC = () => {
           ) : (
             <pre
               style={{
-                background: '#090d16',
-                padding: '20px',
+                background: 'rgba(5, 7, 12, 0.95)',
+                padding: '24px',
                 borderRadius: '8px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
                 fontFamily: 'var(--font-mono)',
                 fontSize: '0.85rem',
                 color: '#cbd5e1',
-                lineHeight: '1.6',
+                lineHeight: '1.65',
                 overflowX: 'auto',
                 whiteSpace: 'pre-wrap',
               }}
@@ -185,7 +211,7 @@ export const ExplanationPage: React.FC = () => {
               {reportData.report}
             </pre>
           )}
-        </div>
+        </motion.div>
       )}
     </div>
   );

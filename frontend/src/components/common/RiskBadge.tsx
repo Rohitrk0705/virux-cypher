@@ -1,11 +1,13 @@
 import React from 'react';
 import { ShieldAlert, AlertTriangle, AlertCircle, ShieldCheck } from 'lucide-react';
 import { IncidentSummary } from '../../types/contracts';
+import { AnimatedCounter } from './AnimatedCounter';
 
 interface RiskBadgeProps {
   score?: number;
   incident?: IncidentSummary;
   showScore?: boolean;
+  animateScore?: boolean;
 }
 
 export function calculateIncidentRisk(incident: IncidentSummary): { score: number; level: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' } {
@@ -37,7 +39,7 @@ export function calculateIncidentRisk(incident: IncidentSummary): { score: numbe
   return { score, level };
 }
 
-export const RiskBadge: React.FC<RiskBadgeProps> = ({ score: propScore, incident, showScore = true }) => {
+export const RiskBadge: React.FC<RiskBadgeProps> = ({ score: propScore, incident, showScore = true, animateScore = false }) => {
   let score = propScore ?? 50;
   let level: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' = 'MEDIUM';
 
@@ -52,30 +54,39 @@ export const RiskBadge: React.FC<RiskBadgeProps> = ({ score: propScore, incident
     else level = 'LOW';
   }
 
+  // Pure amber-to-red hierarchy, with red strictly reserved for high threat/critical
   const config = {
     CRITICAL: {
-      bg: 'rgba(244, 63, 94, 0.15)',
-      border: 'rgba(244, 63, 94, 0.5)',
-      text: '#fb7185',
+      bg: 'rgba(255, 77, 77, 0.12)',
+      border: 'rgba(255, 77, 77, 0.45)',
+      text: '#ff6b6b',
+      glow: '0 0 14px rgba(255, 77, 77, 0.25)',
       icon: ShieldAlert,
+      dotClass: 'pulse-dot-red',
     },
     HIGH: {
-      bg: 'rgba(245, 158, 11, 0.15)',
-      border: 'rgba(245, 158, 11, 0.5)',
-      text: '#fbbf24',
+      bg: 'rgba(255, 138, 61, 0.12)',
+      border: 'rgba(255, 138, 61, 0.45)',
+      text: '#ff9c5a',
+      glow: '0 0 14px rgba(255, 138, 61, 0.22)',
       icon: AlertTriangle,
+      dotClass: 'pulse-dot-amber',
     },
     MEDIUM: {
-      bg: 'rgba(234, 179, 8, 0.12)',
-      border: 'rgba(234, 179, 8, 0.4)',
+      bg: 'rgba(250, 204, 21, 0.1)',
+      border: 'rgba(250, 204, 21, 0.35)',
       text: '#fde047',
+      glow: 'none',
       icon: AlertCircle,
+      dotClass: '',
     },
     LOW: {
-      bg: 'rgba(16, 185, 129, 0.15)',
-      border: 'rgba(16, 185, 129, 0.5)',
+      bg: 'rgba(16, 185, 129, 0.1)',
+      border: 'rgba(16, 185, 129, 0.35)',
       text: '#34d399',
+      glow: 'none',
       icon: ShieldCheck,
+      dotClass: '',
     },
   }[level];
 
@@ -88,12 +99,28 @@ export const RiskBadge: React.FC<RiskBadgeProps> = ({ score: propScore, incident
         backgroundColor: config.bg,
         border: `1px solid ${config.border}`,
         color: config.text,
+        boxShadow: config.glow,
         fontWeight: 600,
+        letterSpacing: '0.04em',
       }}
     >
-      <Icon size={13} />
+      {config.dotClass ? (
+        <span className={config.dotClass} style={{ width: '6px', height: '6px', marginRight: '2px' }} />
+      ) : (
+        <Icon size={12} />
+      )}
       <span>{level}</span>
-      {showScore && <span style={{ opacity: 0.85 }}>({score})</span>}
+      {showScore && (
+        <span style={{ opacity: 0.85, fontWeight: 700 }}>
+          (
+          {animateScore ? (
+            <AnimatedCounter value={score} duration={800} />
+          ) : (
+            score
+          )}
+          )
+        </span>
+      )}
     </span>
   );
 };
